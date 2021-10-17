@@ -39,12 +39,15 @@ enum backend {
 
 enum open_window_animation {
 	OPEN_WINDOW_ANIMATION_NONE = 0,
+	OPEN_WINDOW_ANIMATION_AUTO,
 	OPEN_WINDOW_ANIMATION_FLYIN,
 	OPEN_WINDOW_ANIMATION_ZOOM,
 	OPEN_WINDOW_ANIMATION_SLIDE_UP,
 	OPEN_WINDOW_ANIMATION_SLIDE_DOWN,
 	OPEN_WINDOW_ANIMATION_SLIDE_LEFT,
 	OPEN_WINDOW_ANIMATION_SLIDE_RIGHT,
+	OPEN_WINDOW_ANIMATION_SLIDE_IN,
+	OPEN_WINDOW_ANIMATION_SLIDE_OUT,
 	OPEN_WINDOW_ANIMATION_INVALID,
 };
 
@@ -58,6 +61,9 @@ typedef struct win_option_mask {
 	bool opacity : 1;
 	bool clip_shadow_above : 1;
 	enum open_window_animation animation;
+	enum open_window_animation animation_unmap;
+	enum open_window_animation animation_workspace_in;
+	enum open_window_animation animation_workspace_out;
 } win_option_mask_t;
 
 typedef struct win_option {
@@ -70,6 +76,9 @@ typedef struct win_option {
 	double opacity;
 	bool clip_shadow_above;
 	enum open_window_animation animation;
+	enum open_window_animation animation_unmap;
+	enum open_window_animation animation_workspace_in;
+	enum open_window_animation animation_workspace_out;
 } win_option_t;
 
 enum blur_method {
@@ -193,6 +202,13 @@ typedef struct options {
 	enum open_window_animation animation_for_open_window;
 	/// Which animation to run when opening a transient window
 	enum open_window_animation animation_for_transient_window;
+	/// Which animation to run when unmapping (e.g. minimizing) a window
+	enum open_window_animation animation_for_unmap_window;
+	/// Which animation to run when switching workspace
+	/// IMPORTANT: will only work if window manager updates
+	/// _NET_CURRENT_DESKTOP before doing the hide/show of windows
+	enum open_window_animation animation_for_workspace_switch_in;
+	enum open_window_animation animation_for_workspace_switch_out;
 	/// Spring stiffness for animation
 	double animation_stiffness;
 	/// Window mass for animation

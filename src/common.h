@@ -187,6 +187,10 @@ typedef struct session {
 	int root_height;
 	/// Width of root window.
 	int root_width;
+	/// Current desktop number of root window
+	int root_desktop_num;
+	/// Desktop switch direction
+	int root_desktop_switch_direction;
 	// Damage of root window.
 	// Damage root_damage;
 	/// X Composite overlay window. Used if <code>--paint-on-overlay</code>.

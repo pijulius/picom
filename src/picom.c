@@ -560,6 +560,14 @@ static void configure_root(session_t *ps) {
 	ps->root_width = r->width;
 	ps->root_height = r->height;
 
+	auto prop = x_get_prop(ps->c, ps->root, ps->atoms->a_NET_CURRENT_DESKTOP,
+					1L, XCB_ATOM_CARDINAL, 32);
+
+	ps->root_desktop_switch_direction = 0;
+	if (prop.nitems) {
+		ps->root_desktop_num = (int)*prop.c32;
+	}
+
 	rebuild_screen_reg(ps);
 	rebuild_shadow_exclude_reg(ps);
 
@@ -654,6 +662,7 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 		ps->animation_time = now;
 
 	double delta_secs = (double)(now - ps->animation_time) / 1000;
+	if (!delta_secs || delta_secs > 0.01) delta_secs = 0.01;
 
 	// First, let's process fading
 	win_stack_foreach_managed_safe(w, &ps->window_stack) {
@@ -663,7 +672,7 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 
 		// IMPORTANT: These window animation steps must happen before any other
 		// [pre]processing. This is because it changes the window's geometry.
-		if (ps->o.animations && 
+		if (ps->o.animations &&
 			!isnan(w->animation_progress) && w->animation_progress != 1.0 &&
 			ps->o.wintype_option[w->window_type].animation != 0 &&
 			win_is_mapped_in_x(w))
@@ -802,6 +811,27 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 				w->animation_velocity_y = 0.0;
 				w->animation_velocity_w = 0.0;
 				w->animation_velocity_h = 0.0;
+			}
+
+			if (!ps->root_desktop_switch_direction) {
+				if (w->state == WSTATE_UNMAPPING) {
+					steps = 0;
+					double new_opacity = clamp(
+									w->opacity_target_old-w->animation_progress,
+									w->opacity_target, 1);
+
+					if (new_opacity < w->opacity)
+						w->opacity = new_opacity;
+
+				} else if (w->state == WSTATE_MAPPING) {
+					steps = 0;
+					double new_opacity = clamp(
+										w->animation_progress,
+										0.0, w->opacity_target);
+
+					if (new_opacity > w->opacity)
+						w->opacity = new_opacity;
+				}
 			}
 
 			*animation_running = true;
@@ -1729,6 +1759,7 @@ static void draw_callback_impl(EV_P_ session_t *ps, int revents attr_unused) {
 	}
 	if (!animation_running) {
 		ps->animation_time = 0L;
+		ps->root_desktop_switch_direction = 0;
 	}
 
 	// TODO(yshui) Investigate how big the X critical section needs to be. There are

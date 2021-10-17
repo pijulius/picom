@@ -504,6 +504,18 @@ void set_default_winopts(options_t *opt, win_option_mask_t *mask, bool shadow_en
 			mask[i].animation = OPEN_WINDOW_ANIMATION_INVALID;
 			opt->wintype_option[i].animation = OPEN_WINDOW_ANIMATION_INVALID;
 		}
+		if (!mask[i].animation_unmap) {
+			mask[i].animation_unmap = OPEN_WINDOW_ANIMATION_INVALID;
+			opt->wintype_option[i].animation_unmap = OPEN_WINDOW_ANIMATION_INVALID;
+		}
+		if (!mask[i].animation_workspace_in) {
+			mask[i].animation_workspace_in = OPEN_WINDOW_ANIMATION_INVALID;
+			opt->wintype_option[i].animation_workspace_in = OPEN_WINDOW_ANIMATION_INVALID;
+		}
+		if (!mask[i].animation_workspace_out) {
+			mask[i].animation_workspace_out = OPEN_WINDOW_ANIMATION_INVALID;
+			opt->wintype_option[i].animation_workspace_out = OPEN_WINDOW_ANIMATION_INVALID;
+		}
 		if (!mask[i].clip_shadow_above) {
 			mask[i].clip_shadow_above = true;
 			opt->wintype_option[i].clip_shadow_above = false;
@@ -514,6 +526,8 @@ void set_default_winopts(options_t *opt, win_option_mask_t *mask, bool shadow_en
 enum open_window_animation parse_open_window_animation(const char *src) {
 	if (strcmp(src, "none") == 0) {
 		return OPEN_WINDOW_ANIMATION_NONE;
+	}else if (strcmp(src, "auto") == 0) {
+		return OPEN_WINDOW_ANIMATION_AUTO;
 	} else if (strcmp(src, "fly-in") == 0) {
 		return OPEN_WINDOW_ANIMATION_FLYIN;
 	} else if (strcmp(src, "zoom") == 0) {
@@ -578,6 +592,9 @@ char *parse_config(options_t *opt, const char *config_file, bool *shadow_enable,
 	    .animations = false,
 	    .animation_for_open_window = OPEN_WINDOW_ANIMATION_NONE,
 	    .animation_for_transient_window = OPEN_WINDOW_ANIMATION_NONE,
+	    .animation_for_unmap_window = OPEN_WINDOW_ANIMATION_AUTO,
+	    .animation_for_workspace_switch_in = OPEN_WINDOW_ANIMATION_AUTO,
+	    .animation_for_workspace_switch_out = OPEN_WINDOW_ANIMATION_AUTO,
 	    .animation_stiffness = 200.0,
 	    .animation_window_mass = 1.0,
 	    .animation_dampening = 25,
