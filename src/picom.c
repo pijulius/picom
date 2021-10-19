@@ -794,7 +794,9 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 				pixman_region32_init_rect(&w->bounding_shape, 0, 0,
 											(uint)w->widthb, (uint)w->heightb);
 
-				win_clear_flags(w, WIN_FLAGS_PIXMAP_STALE);
+				if (w->state != WSTATE_DESTROYING)
+					win_clear_flags(w, WIN_FLAGS_PIXMAP_STALE);
+
 				win_process_image_flags(ps, w);
 			}
 			// Mark new window region with damage
@@ -878,7 +880,7 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 		}
 	}
 
-	if (animation_running)
+	if (*animation_running)
 		ps->animation_time = now;
 
 	// Opacity will not change, from now on.
@@ -907,7 +909,10 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 		if (w->state == WSTATE_UNMAPPED ||
 		    unlikely(w->base.id == ps->debug_window ||
 		             w->client_win == ps->debug_window)) {
-			to_paint = false;
+
+			if (!*fade_running || w->opacity == w->opacity_target)
+				to_paint = false;
+
 		} else if (!w->ever_damaged && w->state != WSTATE_UNMAPPING &&
 		           w->state != WSTATE_DESTROYING) {
 			// Unmapping clears w->ever_damaged, but the fact that the window

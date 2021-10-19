@@ -1468,7 +1468,9 @@ void win_on_win_size_change(session_t *ps, struct managed_win *w) {
 	       w->state != WSTATE_UNMAPPING);
 
 	// Invalidate the shadow we built
-	win_set_flags(w, WIN_FLAGS_IMAGES_STALE);
+	if (w->state != WSTATE_DESTROYING)
+		win_set_flags(w, WIN_FLAGS_IMAGES_STALE);
+
 	ps->pending_updates = true;
 	free_paint(ps, &w->shadow_paint);
 }
@@ -3109,5 +3111,5 @@ win_stack_find_next_managed(const session_t *ps, const struct list_node *i) {
 bool win_is_mapped_in_x(const struct managed_win *w) {
 	return w->state == WSTATE_MAPPING || w->state == WSTATE_FADING ||
 	       w->state == WSTATE_MAPPED || w->state == WSTATE_UNMAPPING ||
-	       (w->flags & WIN_FLAGS_MAPPED);
+	       w->state == WSTATE_DESTROYING || (w->flags & WIN_FLAGS_MAPPED);
 }
