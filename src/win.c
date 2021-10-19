@@ -442,7 +442,9 @@ static void win_update_properties(session_t *ps, struct managed_win *w) {
 static void init_animation(session_t *ps, struct managed_win *w) {
 	enum open_window_animation animation = ps->o.animation_for_open_window;
 
-	if (w->window_type != WINTYPE_TOOLTIP && w->is_transient)
+	w->animation_transient = wid_has_prop(ps, w->client_win, ps->atoms->aWM_TRANSIENT_FOR);
+
+	if (w->window_type != WINTYPE_TOOLTIP && w->animation_transient)
 		animation = ps->o.animation_for_transient_window;
 
 	if (ps->o.wintype_option[w->window_type].animation < OPEN_WINDOW_ANIMATION_INVALID)
@@ -544,7 +546,7 @@ static void init_animation_unmap(session_t *ps, struct managed_win *w) {
 	if (ps->o.animation_for_unmap_window == OPEN_WINDOW_ANIMATION_AUTO) {
 		animation = ps->o.animation_for_open_window;
 
-		if (w->window_type != WINTYPE_TOOLTIP && w->is_transient)
+		if (w->window_type != WINTYPE_TOOLTIP && w->animation_transient)
 			animation = ps->o.animation_for_transient_window;
 
 		if (ps->o.wintype_option[w->window_type].animation < OPEN_WINDOW_ANIMATION_INVALID)
@@ -1980,7 +1982,6 @@ void win_update_leader(session_t *ps, struct managed_win *w) {
 	}
 
 	win_set_leader(ps, w, leader);
-	w->is_transient = wid_has_prop(ps, w->client_win, ps->atoms->aWM_TRANSIENT_FOR);
 
 	log_trace("(%#010x): client %#010x, leader %#010x, cache %#010x", w->base.id,
 	          w->client_win, w->leader, win_get_leader(ps, w));

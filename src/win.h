@@ -171,8 +171,8 @@ struct managed_win {
 	bool unredir_if_possible_excluded;
 	/// Whether this window is in open/close state.
 	bool in_openclose;
-	/// Whether this window is transient
-	bool is_transient;
+	/// Whether this window was transient when animated on open
+	bool animation_transient;
 	/// Current position and destination, for animation
 	double animation_center_x,      animation_center_y;
 	double animation_dest_center_x, animation_dest_center_y;
