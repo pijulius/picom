@@ -816,7 +816,7 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 			}
 
 			if (!ps->root_desktop_switch_direction) {
-				if (w->state == WSTATE_UNMAPPING) {
+				if (w->state == WSTATE_UNMAPPING || w->state == WSTATE_DESTROYING) {
 					steps = 0;
 					double new_opacity = clamp(
 									w->opacity_target_old-w->animation_progress,
