@@ -608,6 +608,10 @@ char *parse_config_libconfig(options_t *opt, const char *config_file, bool *shad
 	config_lookup_float(&cfg, "animation-window-mass", &opt->animation_window_mass);
 	// --animation-dampening
 	config_lookup_float(&cfg, "animation-dampening", &opt->animation_dampening);
+	// --animation-delta
+	config_lookup_float(&cfg, "animation-delta", &opt->animation_delta);
+	// --animation-force-steps
+	lcfg_lookup_bool(&cfg, "animation-force-steps", &opt->animation_force_steps);
 	// --animation-clamping
 	lcfg_lookup_bool(&cfg, "animation-clamping", &opt->animation_clamping);
 	// --focus-exclude

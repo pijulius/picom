@@ -658,11 +658,20 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 	}
 	ps->fade_time += steps * ps->o.fade_delta;
 
-	if (ps->o.animations && !ps->animation_time)
-		ps->animation_time = now;
+	double animation_delta = 0;
+	if (ps->o.animations) {
+		if (!ps->animation_time)
+			ps->animation_time = now;
 
-	double delta_secs = (double)(now - ps->animation_time) / 1000;
-	if (!delta_secs || delta_secs > 0.01) delta_secs = 0.01;
+		animation_delta = (double)(now - ps->animation_time) /
+			(ps->o.animation_delta*100);
+
+		if (ps->o.animation_force_steps &&
+			animation_delta > ps->o.animation_delta/1000)
+		{
+			animation_delta = ps->o.animation_delta/1000;
+		}
+	}
 
 	// First, let's process fading
 	win_stack_foreach_managed_safe(w, &ps->window_stack) {
@@ -699,20 +708,20 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 				(ps->o.animation_stiffness * neg_displacement_h -
 					ps->o.animation_dampening * w->animation_velocity_h) /
 				ps->o.animation_window_mass;
-			w->animation_velocity_x += acceleration_x * delta_secs;
-			w->animation_velocity_y += acceleration_y * delta_secs;
-			w->animation_velocity_w += acceleration_w * delta_secs;
-			w->animation_velocity_h += acceleration_h * delta_secs;
+			w->animation_velocity_x += acceleration_x * animation_delta;
+			w->animation_velocity_y += acceleration_y * animation_delta;
+			w->animation_velocity_w += acceleration_w * animation_delta;
+			w->animation_velocity_h += acceleration_h * animation_delta;
 
 			// Animate window geometry
 			double new_animation_x =
-				w->animation_center_x + w->animation_velocity_x * delta_secs;
+				w->animation_center_x + w->animation_velocity_x * animation_delta;
 			double new_animation_y =
-				w->animation_center_y + w->animation_velocity_y * delta_secs;
+				w->animation_center_y + w->animation_velocity_y * animation_delta;
 			double new_animation_w =
-				w->animation_w + w->animation_velocity_w * delta_secs;
+				w->animation_w + w->animation_velocity_w * animation_delta;
 			double new_animation_h =
-				w->animation_h + w->animation_velocity_h * delta_secs;
+				w->animation_h + w->animation_velocity_h * animation_delta;
 
 			// Negative new width/height causes segfault and it can happen
 			// when clamping disabled and shading a window
