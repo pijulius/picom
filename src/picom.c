@@ -666,11 +666,8 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 		animation_delta = (double)(now - ps->animation_time) /
 			(ps->o.animation_delta*100);
 
-		if (ps->o.animation_force_steps &&
-			animation_delta > ps->o.animation_delta/1000)
-		{
-			animation_delta = ps->o.animation_delta/1000;
-		}
+		if (ps->o.animation_force_steps)
+			animation_delta = min2(animation_delta, ps->o.animation_delta/1000);
 	}
 
 	// First, let's process fading
