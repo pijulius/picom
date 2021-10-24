@@ -794,11 +794,7 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 			// Submit window size change
 			if (size_changed) {
 				win_on_win_size_change(ps, w);
-
-				pixman_region32_clear(&w->bounding_shape);
-				pixman_region32_fini(&w->bounding_shape);
-				pixman_region32_init_rect(&w->bounding_shape, 0, 0,
-											(uint)w->widthb, (uint)w->heightb);
+				win_update_bounding_shape(ps, w);
 
 				if (w->state != WSTATE_DESTROYING)
 					win_clear_flags(w, WIN_FLAGS_PIXMAP_STALE);
