@@ -9,7 +9,7 @@ You can leave your feedback or thoughts in the [discussion tab](https://github.c
 
 ## About this Fork
 
-Extended animation support (auto, fly-in, zoom, squeeze, slide-up, slide-down, slide-left, slide-right) from original [repo](https://github.com/dccsillag/picom) by @dccsillag, added slide-out, slide-in for workspace switching with [Custom Fluxbox](https://github.com/pijulius/fluxbox/commit/83ee4dbee67a68fe38b0f96431473719e165bf1e) , animation on window type basis (for e.g. make transient windows like "about us" slide down and slide backup to the titlebar of the owner window) and some fixes.
+Extended animation support (auto, fly-in, zoom, squeeze, slide-up, slide-down, slide-left, slide-right) from original [repo](https://github.com/dccsillag/picom) by @dccsillag, added slide-out, slide-in for workspace switching with [Custom Fluxbox](https://github.com/pijulius/fluxbox/commit/83ee4dbee67a68fe38b0f96431473719e165bf1e) , animation on window type basis (for e.g. make transient windows like "about us" slide down and slide backup to the titlebar of the owner window), animation-exclude list for disabling animations on window/program basis and some fixes.
 
 Reason: original picom by @yshui [repo](https://github.com/yshui/picom/) didn't have animation support and @dccsillag implementation was the best could find so building uppon his work this repo was made. FYI: looks like original picom will have animation support starting with version 12 but will keep this repo as atm looks like the animation here are smoother/better (of course everyone's own point of view) and had some trouble with the latest picom so till find out the reasons will use this repo personally and everyone is velcome to do so.
 
