@@ -13,15 +13,30 @@
 #define CASESTRRET(s)                                                                    \
 	case s: return #s
 
+static inline GLint glGetUniformLocationChecked(GLuint p, const char *name) {
+	auto ret = glGetUniformLocation(p, name);
+	if (ret < 0) {
+		log_info("Failed to get location of uniform '%s'. This is normal when "
+		         "using custom shaders.",
+		         name);
+	}
+	return ret;
+}
+
+#define bind_uniform(shader, uniform)                                                    \
+	(shader)->uniform_##uniform = glGetUniformLocationChecked((shader)->prog, #uniform)
+
 // Program and uniforms for window shader
 typedef struct {
 	GLuint prog;
-	GLint unifm_opacity;
-	GLint unifm_invert_color;
-	GLint unifm_tex;
-	GLint unifm_dim;
-	GLint unifm_brightness;
-	GLint unifm_max_brightness;
+	GLint uniform_opacity;
+	GLint uniform_invert_color;
+	GLint uniform_tex;
+	GLint uniform_dim;
+	GLint uniform_brightness;
+	GLint uniform_max_brightness;
+	GLint uniform_corner_radius;
+	GLint uniform_border_width;
 } gl_win_shader_t;
 
 // Program and uniforms for brightness shader
@@ -32,8 +47,8 @@ typedef struct {
 // Program and uniforms for blur shader
 typedef struct {
 	GLuint prog;
-	GLint unifm_pixel_norm;
-	GLint unifm_opacity;
+	GLint uniform_pixel_norm;
+	GLint uniform_opacity;
 	GLint texorig_loc;
 	GLint scale_loc;
 } gl_blur_shader_t;
@@ -60,6 +75,8 @@ struct gl_data {
 	backend_t base;
 	// If we are using proprietary NVIDIA driver
 	bool is_nvidia;
+	// If ARB_robustness extension is present
+	bool has_robustness;
 	// Height and width of the root window
 	int height, width;
 	gl_win_shader_t win_shader;
@@ -118,6 +135,7 @@ void gl_fill(backend_t *base, struct color, const region_t *clip);
 
 void gl_present(backend_t *base, const region_t *);
 bool gl_read_pixel(backend_t *base, void *image_data, int x, int y, struct color *output);
+enum device_status gl_device_status(backend_t *base);
 
 static inline void gl_delete_texture(GLuint texture) {
 	glDeleteTextures(1, &texture);
