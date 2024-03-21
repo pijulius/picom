@@ -486,6 +486,13 @@ static void init_animation(session_t *ps, struct managed_win *w) {
 		w->animation_h = 0;
 		break;
 	}
+	case OPEN_WINDOW_ANIMATION_SQUEEZE: { //Squeeze up like old tv turn on, without changing its location
+		w->animation_center_x = w->pending_g.x + w->pending_g.width * 0.5;
+		w->animation_center_y = w->pending_g.y + w->pending_g.height * 0.5;
+		w->animation_w = w->pending_g.width;
+		w->animation_h = 0;
+		break;
+	}
 	case OPEN_WINDOW_ANIMATION_SLIDE_UP: { // Slide up the image, without changing its location
 		w->animation_center_x = w->pending_g.x + w->pending_g.width * 0.5;
 		w->animation_center_y = w->pending_g.y + w->pending_g.height;
@@ -605,6 +612,13 @@ static void init_animation_unmap(session_t *ps, struct managed_win *w) {
 		w->animation_dest_center_x = w->pending_g.x + w->pending_g.width * 0.5;
 		w->animation_dest_center_y = w->pending_g.y + w->pending_g.height * 0.5;
 		w->animation_dest_w = 0;
+		w->animation_dest_h = 0;
+		break;
+	}
+	case OPEN_WINDOW_ANIMATION_SQUEEZE: { //Squeeze down like old tv turn off, without changing its location
+		w->animation_dest_center_x = w->pending_g.x + w->pending_g.width * 0.5;
+		w->animation_dest_center_y = w->pending_g.y + w->pending_g.height * 0.5;
+		w->animation_dest_w = w->pending_g.width;
 		w->animation_dest_h = 0;
 		break;
 	}
