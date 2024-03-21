@@ -218,7 +218,8 @@ typedef struct options {
 	bool animation_force_steps;
 	/// Whether to clamp animations
 	bool animation_clamping;
-	/// TODO: window animation blacklist
+	/// Animation blacklist. A linked list of conditions.
+	c2_lptr_t *animation_blacklist;
 	/// TODO: open/close animations
 
 	// === Opacity ===

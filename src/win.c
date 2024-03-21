@@ -442,6 +442,7 @@ static void win_update_properties(session_t *ps, struct managed_win *w) {
 static void init_animation(session_t *ps, struct managed_win *w) {
 	enum open_window_animation animation = ps->o.animation_for_open_window;
 
+	w->animation_ignore = c2_match(ps, w, ps->o.animation_blacklist, NULL);
 	w->animation_transient = wid_has_prop(ps, w->client_win, ps->atoms->aWM_TRANSIENT_FOR);
 
 	if (w->window_type != WINTYPE_TOOLTIP && w->animation_transient)
@@ -456,6 +457,9 @@ static void init_animation(session_t *ps, struct managed_win *w) {
 		else
 			animation = ps->o.animation_for_workspace_switch_in;
 	}
+
+	if (w->animation_ignore)
+		animation = OPEN_WINDOW_ANIMATION_NONE;
 
 	switch (animation) {
 	case OPEN_WINDOW_ANIMATION_AUTO:
@@ -585,6 +589,9 @@ static void init_animation_unmap(session_t *ps, struct managed_win *w) {
 		else
 			animation = ps->o.animation_for_workspace_switch_out;
 	}
+
+	if (w->animation_ignore)
+		animation = OPEN_WINDOW_ANIMATION_NONE;
 
 	switch (animation) {
 	case OPEN_WINDOW_ANIMATION_AUTO:

@@ -132,6 +132,9 @@ static void usage(const char *argv0, int ret) {
 	    "--animation-clamping\n"
 	    "  Whether to clamp animations (default: true)\n"
 	    "\n"
+	    "--animation-exclude condition\n"
+	    "  Exclude conditions for animations.\n"
+	    "\n"
 	    "-i opacity\n"
 	    "  Opacity of inactive windows. (0.1 - 1.0)\n"
 	    "\n"
@@ -515,6 +518,7 @@ static const struct option longopts[] = {
     {"animation-clamping", no_argument, NULL, 808},
     {"animation-for-open-window", required_argument, NULL, 809},
     {"animation-for-transient-window", required_argument, NULL, 810},
+    {"animation-exclude", required_argument, NULL, 811},
     // Must terminate with a NULL entry
     {NULL, 0, NULL, 0},
 };
@@ -956,6 +960,11 @@ bool get_cfg(options_t *opt, int argc, char *const *argv, bool shadow_enable,
 			} else {
 				opt->animation_for_transient_window = animation;
 			}
+			break;
+		}
+		case 811: {
+			// --animation-exclude
+			condlst_add(&opt->animation_blacklist, optarg);
 			break;
 		}
 		default: usage(argv[0], 1); break;
