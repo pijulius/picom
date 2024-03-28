@@ -723,12 +723,11 @@ void win_process_update_flags(session_t *ps, struct managed_win *w) {
 			add_damage_from_win(ps, w);
 		}
 
-		// Ignore animations all together if set to none on window type basis
-		if (ps->o.wintype_option[w->window_type].animation == 0) {
-			w->g = w->pending_g;
-
-		// Update window geometry
-		} else if (ps->o.animations) {
+		// Update window geometry if animations enabled, window isn't set to NOT animate
+		// and picom isn't just starting up or restarting
+		if (ps->o.animations && ps->o.wintype_option[w->window_type].animation != 0 &&
+			w->state != WSTATE_MAPPED && w->state != WSTATE_UNMAPPED)
+		{
 			if (!was_visible) {
 				// Set window-open animation
 				init_animation(ps, w);
