@@ -759,7 +759,7 @@ paint_preprocess(session_t *ps, bool *fade_running, bool *animation_running) {
 			bool geometry_changed = position_changed || size_changed;
 
 			// Mark past window region with damage
-			if (was_painted && geometry_changed)
+			if (geometry_changed)
 				add_damage_from_win(ps, w);
 
 			double x_dist = w->animation_dest_center_x - w->animation_center_x;
