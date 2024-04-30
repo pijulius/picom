@@ -1051,7 +1051,9 @@ void gl_fill(backend_t *base, struct color c, const region_t *clip) {
 
 static void gl_release_image_inner(backend_t *base, struct gl_texture *inner) {
 	auto gd = (struct gl_data *)base;
-	gd->release_user_data(base, inner);
+	if (inner->user_data) {
+		gd->release_user_data(base, inner);
+	}
 	assert(inner->user_data == NULL);
 
 	glDeleteTextures(1, &inner->texture);

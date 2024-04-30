@@ -253,6 +253,8 @@ void paint_all_new(session_t *ps, struct managed_win *t, bool ignore_damage) {
 		// The bounding shape of the window, in global/target coordinates
 		// reminder: bounding shape contains the WM frame
 		auto reg_bound = win_get_bounding_shape_global_by_val(w);
+		auto reg_bound_no_corner =
+			win_get_bounding_shape_global_without_corners_by_val(w);
 
 		// The clip region for the current window, in global/target coordinates
 		// reg_paint_in_bound \in reg_paint
@@ -354,7 +356,8 @@ void paint_all_new(session_t *ps, struct managed_win *t, bool ignore_damage) {
 			auto reg_shadow = win_extents_by_val(w);
 			pixman_region32_intersect(&reg_shadow, &reg_shadow, &reg_paint);
 			if (!ps->o.wintype_option[w->window_type].full_shadow) {
-				pixman_region32_subtract(&reg_shadow, &reg_shadow, &reg_bound);
+				pixman_region32_subtract(&reg_shadow, &reg_shadow,
+							&reg_bound_no_corner);
 			}
 
 			// Mask out the region we don't want shadow on
@@ -391,6 +394,7 @@ void paint_all_new(session_t *ps, struct managed_win *t, bool ignore_damage) {
 			ps->backend_data->ops->set_image_property(
 			    ps->backend_data, IMAGE_PROPERTY_OPACITY, w->shadow_image,
 			    &w->opacity);
+
 			ps->backend_data->ops->compose(
 			    ps->backend_data, w->shadow_image, w->g.x + w->shadow_dx,
 			    w->g.y + w->shadow_dy, w->g.x + w->shadow_dx + w->shadow_width,
@@ -493,6 +497,7 @@ void paint_all_new(session_t *ps, struct managed_win *t, bool ignore_damage) {
 		}
 	skip:
 		pixman_region32_fini(&reg_bound);
+		pixman_region32_fini(&reg_bound_no_corner);
 		pixman_region32_fini(&reg_paint_in_bound);
 	}
 	pixman_region32_fini(&reg_paint);
