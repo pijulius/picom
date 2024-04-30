@@ -452,6 +452,8 @@ static void init_animation(session_t *ps, struct managed_win *w) {
 		animation = ps->o.wintype_option[w->window_type].animation;
 
 	if (ps->root_desktop_switch_direction != 0) {
+		w->opacity = w->opacity_target;
+
 		if (ps->o.animation_for_workspace_switch_in == OPEN_WINDOW_ANIMATION_AUTO)
 			animation = OPEN_WINDOW_ANIMATION_SLIDE_IN;
 		else
