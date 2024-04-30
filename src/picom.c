@@ -2114,6 +2114,13 @@ static session_t *session_init(int argc, char **argv, Display *dpy,
 		ps->xinerama_exists = ext_info && ext_info->present;
 	}
 
+	auto prop = x_get_prop(ps->c, ps->root, ps->atoms->a_NET_CURRENT_DESKTOP,
+		    1L, XCB_ATOM_CARDINAL, 32);
+
+	if (prop.nitems) {
+		ps->root_desktop_num = (int)*prop.c32;
+	}
+
 	rebuild_screen_reg(ps);
 
 	bool compositor_running = false;
