@@ -20,7 +20,6 @@ See [Releases](https://github.com/yshui/picom/releases)
 This fork adds some fixes/enhancements that may not be considered correcty/fully integrated but they do work for me personally and use them 24/7 so will have it here for everyone to play with :)
 
 * Desktop Switching Animation support https://github.com/yshui/picom/pull/1262
-* Corner Radius Fix for GLX backend https://github.com/yshui/picom/pull/1261
 * Possibility for frame opacity to include menubar/toolbar and so on https://github.com/yshui/picom/pull/1261#issuecomment-2132154214
 
 If you want to use the old animation developed by [@dccsillag](https://github.com/dccsillag/picom) it is still available under the [implement-window-animations](https://github.com/pijulius/picom/tree/implement-window-animations) branch.
