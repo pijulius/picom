@@ -224,8 +224,8 @@ static inline void parse_wintype_config(const config_t *cfg, const char *member_
 	}
 }
 
-static enum animation_trigger parse_animation_trigger(const char *trigger) {
-	for (int i = 0; i <= ANIMATION_TRIGGER_LAST; i++) {
+enum animation_trigger parse_animation_trigger(const char *trigger) {
+	for (unsigned i = 0; i < ANIMATION_TRIGGER_COUNT; i++) {
 		if (strcasecmp(trigger, animation_trigger_names[i]) == 0) {
 			return i;
 		}
@@ -297,7 +297,7 @@ static bool parse_animation_one(struct win_script *animations,
 	}
 	auto number_of_triggers =
 	    config_setting_get_string(triggers) == NULL ? config_setting_length(triggers) : 1;
-	if (number_of_triggers > ANIMATION_TRIGGER_LAST) {
+	if (number_of_triggers > ANIMATION_TRIGGER_COUNT) {
 		log_error("Too many triggers in animation defined at line %d",
 		          config_setting_source_line(triggers));
 		return false;
@@ -627,6 +627,8 @@ parse_rule(struct list_node *rules, config_setting_t *setting, struct script ***
 	if (animations) {
 		parse_animations(wopts->animations, animations, out_scripts);
 	}
+
+	config_setting_lookup_string(setting, "shader", &wopts->shader);
 	return rule;
 }
 
@@ -764,6 +766,14 @@ bool parse_config_libconfig(options_t *opt, const char *config_file) {
 	config_setting_t *rules = config_lookup(&cfg, "rules");
 	if (rules) {
 		parse_rules(&opt->rules, rules, &opt->all_scripts);
+		c2_condition_list_foreach(&opt->rules, i) {
+			auto data = (struct window_maybe_options *)c2_condition_get_data(i);
+			if (data->shader == NULL) {
+				continue;
+			}
+			data->shader = locate_auxiliary_file(
+			    "shaders", data->shader, config_get_include_dir(&cfg));
+		}
 	}
 
 	// --dbus

@@ -68,6 +68,7 @@
 #include "utils/list.h"
 #include "utils/misc.h"
 #include "utils/statistics.h"
+#include "utils/str.h"
 #include "utils/uthash_extra.h"
 #include "vblank.h"
 #include "wm/defs.h"
@@ -804,7 +805,11 @@ static bool paint_preprocess(session_t *ps, bool *animation, struct win **out_bo
 		const double window_opacity = win_animatable_get(w, WIN_SCRIPT_OPACITY);
 		const double blur_opacity = win_animatable_get(w, WIN_SCRIPT_BLUR_OPACITY);
 		auto window_options = win_options(w);
-		if (window_options.shader->attributes & SHADER_ATTRIBUTE_ANIMATED) {
+		struct shader_info *fg_shader = NULL;
+		if (window_options.shader != NULL) {
+			HASH_FIND_STR(ps->shaders, window_options.shader, fg_shader);
+		}
+		if (fg_shader != NULL && fg_shader->attributes & SHADER_ATTRIBUTE_ANIMATED) {
 			add_damage_from_win(ps, w);
 			*animation = true;
 		}
@@ -1151,10 +1156,7 @@ static int register_cm(session_t *ps) {
 		xcb_atom_t atom;
 
 		char *buf = NULL;
-		if (asprintf(&buf, "%s%d", register_prop, ps->c.screen) < 0) {
-			log_fatal("Failed to allocate memory");
-			return -1;
-		}
+		casprintf(&buf, "%s%d", register_prop, ps->c.screen);
 		atom = get_atom_with_nul(ps->atoms, buf, ps->c.c);
 		free(buf);
 
@@ -1654,12 +1656,8 @@ static void handle_pending_updates(struct session *ps, double delta_t) {
 		// Process window flags. This needs to happen before `refresh_images`
 		// because this might set the pixmap stale window flag.
 		refresh_windows(ps);
+		ps->pending_updates = false;
 	}
-
-	// Process window flags (stale images)
-	refresh_images(ps);
-
-	ps->pending_updates = false;
 
 	wm_stack_foreach_safe(ps->wm, cursor, tmp) {
 		auto w = wm_ref_deref(cursor);
@@ -1670,6 +1668,11 @@ static void handle_pending_updates(struct session *ps, double delta_t) {
 			free(w->running_animation_instance);
 			w->running_animation_instance = NULL;
 			w->in_openclose = false;
+			if (w->saved_win_image != NULL) {
+				ps->backend_data->ops.release_image(ps->backend_data,
+				                                    w->saved_win_image);
+				w->saved_win_image = NULL;
+			}
 			if (w->state == WSTATE_UNMAPPED) {
 				unmap_win_finish(ps, w);
 			} else if (w->state == WSTATE_DESTROYED) {
@@ -1677,6 +1680,10 @@ static void handle_pending_updates(struct session *ps, double delta_t) {
 			}
 		}
 	}
+
+	// Process window flags (stale images)
+	refresh_images(ps);
+	assert(ps->pending_updates == false);
 }
 
 /**
@@ -1852,7 +1859,7 @@ static void draw_callback_impl(EV_P_ session_t *ps, int revents attr_unused) {
 			    ps->o.force_win_blend, ps->o.blur_background_frame,
 			    ps->o.inactive_dim_fixed, ps->o.max_brightness,
 			    ps->o.crop_shadow_to_monitor ? &ps->monitors : NULL,
-			    &after_damage_us);
+			    ps->shaders, &after_damage_us);
 			if (!succeeded) {
 				log_fatal("Render failure");
 				abort();
@@ -2003,7 +2010,7 @@ static struct window_options win_options_from_config(const struct options *opts)
 	    .transparent_clipping = opts->transparent_clipping,
 	    .dim = opts->inactive_dim > 0,
 	    .fade = opts->fading_enable,
-	    .shader = &null_shader,
+	    .shader = opts->window_shader_fg,
 	    .invert_color = false,
 	    .paint = true,
 	    .clip_shadow_above = false,
@@ -2250,6 +2257,16 @@ static session_t *session_init(int argc, char **argv, Display *dpy,
 	}
 	if (load_shader_source(ps, ps->o.window_shader_fg)) {
 		log_error("Failed to load window shader source file");
+	}
+
+	c2_condition_list_foreach(&ps->o.rules, i) {
+		auto data = (struct window_maybe_options *)c2_condition_get_data(i);
+		if (data->shader == NULL) {
+			continue;
+		}
+		if (load_shader_source(ps, data->shader)) {
+			log_error("Failed to load shader source file for window rules");
+		}
 	}
 
 	if (log_get_level_tls() <= LOG_LEVEL_DEBUG) {

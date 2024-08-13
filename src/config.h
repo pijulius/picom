@@ -70,7 +70,6 @@ enum vblank_scheduler_type {
 };
 
 enum animation_trigger {
-	ANIMATION_TRIGGER_INVALID = -1,
 	/// When a hidden window is shown
 	ANIMATION_TRIGGER_SHOW = 0,
 	/// When a window is hidden
@@ -87,7 +86,11 @@ enum animation_trigger {
 	ANIMATION_TRIGGER_WORKSPACE_IN_INVERSE,
 	ANIMATION_TRIGGER_WORKSPACE_OUT,
 	ANIMATION_TRIGGER_WORKSPACE_OUT_INVERSE,
-	ANIMATION_TRIGGER_LAST = ANIMATION_TRIGGER_WORKSPACE_OUT_INVERSE,
+	/// When a window's geometry changes
+	ANIMATION_TRIGGER_GEOMETRY,
+
+	ANIMATION_TRIGGER_INVALID,
+	ANIMATION_TRIGGER_COUNT = ANIMATION_TRIGGER_INVALID,
 };
 
 static const char *animation_trigger_names[] attr_unused = {
@@ -101,6 +104,7 @@ static const char *animation_trigger_names[] attr_unused = {
     [ANIMATION_TRIGGER_WORKSPACE_IN_INVERSE] = "workspace-in-inverse",
     [ANIMATION_TRIGGER_WORKSPACE_OUT] = "workspace-out",
     [ANIMATION_TRIGGER_WORKSPACE_OUT_INVERSE] = "workspace-out-inverse",
+    [ANIMATION_TRIGGER_GEOMETRY] = "geometry",
 };
 
 struct script;
@@ -177,8 +181,8 @@ struct window_maybe_options {
 	/// Window dim level, NaN means not set.
 	double dim;
 
-	/// Name of the custom fragment shader for this window. NULL means not set.
-	const struct shader_info *shader;
+	/// The name of the custom fragment shader for this window. NULL means not set.
+	const char *shader;
 
 	/// Whether transparent clipping is excluded by the rules.
 	enum tristate transparent_clipping;
@@ -200,7 +204,7 @@ struct window_maybe_options {
 	enum tristate full_shadow;
 
 	/// Window specific animations
-	struct win_script animations[ANIMATION_TRIGGER_LAST + 1];
+	struct win_script animations[ANIMATION_TRIGGER_COUNT];
 };
 
 // Make sure `window_options` has no implicit padding.
@@ -210,7 +214,7 @@ struct window_maybe_options {
 struct window_options {
 	double opacity;
 	double dim;
-	const struct shader_info *shader;
+	const char *shader;
 	unsigned int corner_radius;
 	enum window_unredir_option unredir;
 	bool transparent_clipping;
@@ -222,7 +226,7 @@ struct window_options {
 	bool paint;
 	bool full_shadow;
 
-	struct win_script animations[ANIMATION_TRIGGER_LAST + 1];
+	struct win_script animations[ANIMATION_TRIGGER_COUNT];
 };
 #pragma GCC diagnostic pop
 
@@ -232,8 +236,6 @@ win_options_no_damage(const struct window_options *a, const struct window_option
 	// they don't cause damage.
 	return memcmp(a, b, offsetof(struct window_options, animations)) == 0;
 }
-
-extern struct shader_info null_shader;
 
 /// Structure representing all options.
 typedef struct options {
@@ -446,7 +448,7 @@ typedef struct options {
 
 	bool dithered_present;
 	// === Animation ===
-	struct win_script animations[ANIMATION_TRIGGER_LAST + 1];
+	struct win_script animations[ANIMATION_TRIGGER_COUNT];
 	/// Array of all the scripts used in `animations`. This is a dynarr.
 	struct script **all_scripts;
 
@@ -535,5 +537,6 @@ static inline void log_warn_both_style_of_rules(const char *option_name) {
 	         "precedence, and \"%s\" will have no effect.",
 	         option_name, option_name);
 }
+enum animation_trigger parse_animation_trigger(const char *trigger);
 
 // vim: set noet sw=8 ts=8 :
