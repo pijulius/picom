@@ -1,8 +1,36 @@
 # Unreleased
 
+## Deprecations
+
+* `--legacy-backends` is now deprecated. Setting it no longer has an effect.
+* `resize-damage`, `glx-no-stencil` and `glx-no-rebind-pixmap` are now deprecated, because they only works on legacy backends.
+* Removed several options that have been deprecated for a long time, this includes:
+  - `glx-fshader-win`
+  - `glx-swap-method`
+  - `glx-use-gpushader4`
+  - `menu-opacity`
+  - `vsync-aggressive`
+  - `respect-prop-shadow`
+  - `sw-opti`
+  - `clear-shadow`
+
+# 12.x (unreleased)
+
+## Build fixes
+
+* Fix build on arm32 (#1355)
+
+# 12.3 (2024-Oct-14)
+
+## Improvements
+
+* Extend workaround for missing hardware accelerated convolution to more drivers (#1349)
+
 ## Bug fixes
 
 * Fix memory corruption that can happen when handling window property changes (#1350)
+* Fix `force-win-blend` having no effect (#1354)
+* Fix shadow being rendered incorrectly in xrender backend (#1352)
 
 # 12.2 (2024-Oct-10)
 

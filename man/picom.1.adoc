@@ -62,22 +62,19 @@ OPTIONS
 	Daemonize process. Fork to background after initialization. This option can only be set from the command line, setting this in the configuration file will have no effect.
 
 *--log-level*::
-	Set the log level. Possible values are "TRACE", "DEBUG", "INFO", "WARN", "ERROR", in increasing level of importance. Case doesn't matter. If using the "TRACE" log level, it's better to log into a file using *--log-file*, since it can generate a huge stream of logs.
+	Set the log level. Possible values are "TRACE", "VERBOSE", "DEBUG", "INFO", "WARN", "ERROR", in increasing level of importance. Case doesn't matter. If using the "TRACE" log level, it's better to log into a file using *--log-file*, since it can generate a huge stream of logs.
 
 *--log-file*::
 	Set the log file. If *--log-file* is never specified, logs will be written to stderr. Otherwise, logs will to written to the given file, though some of the early logs might still be written to the stderr. When setting this option from the config file, it is recommended to use an absolute path.
-
-*--legacy-backends*::
-	Use the old version of the backends. This option can not be set from the config file.
 
 *--show-all-xerrors*::
 	Show all X errors (for debugging).
 
 *--config* _PATH_::
-	Look for configuration file at the path. See *CONFIGURATION FILES* section below for where picom looks for a configuration file by default. Use `/dev/null` to avoid loading configuration file.
+	Look for configuration file at the path. See xref:_configuration_files[*CONFIGURATION FILES*] section below for where picom looks for a configuration file by default. Use `/dev/null` to avoid loading configuration file.
 
 *--write-pid-path* _PATH_::
-	Write process ID to a file. it is recommended to use an absolute path.
+	Write process ID to a file. It is recommended to use an absolute path.
 
 *--plugins* _PATH_::
 	Specify plugins to load. Plugins will first be searched in current working directory (unless specified in the config file, in which case this step is skipped), then in `$XDG_CONFIG_HOME/picom/plugins`, then in `$XDG_CONFIG_DIRS/picom/plugins`. If all of the above fail, the plugin name is passed directly to the dynamic loader. Can be specified multiple times to load more than one plugins.
@@ -176,10 +173,10 @@ OPTIONS
 	Use _WM_TRANSIENT_FOR_ to group windows, and consider windows in the same group focused at the same time.
 
 [[detect-client-leader]]*--detect-client-leader*::
-	Use _WM_CLIENT_LEADER_ to group windows, and consider windows in the same group focused at the same time. This usually means windows from the same application will be considered focused or unfocused at the same time._WM_TRANSIENT_FOR_ has higher priority if *--detect-transient* is enabled, too.
+	Use _WM_CLIENT_LEADER_ to group windows, and consider windows in the same group focused at the same time. This usually means windows from the same application will be considered focused or unfocused at the same time. _WM_TRANSIENT_FOR_ has higher priority if *--detect-transient* is enabled, too.
 
 *--blur-method*, *--blur-size*, *--blur-deviation*, *--blur-strength*::
-	Parameters for background blurring, see the *BLUR* section for more information.
+	Parameters for background blurring, see the xref:_blur[*BLUR*] section for more information.
 
 *--blur-background*::
 	Blur background of semi-transparent / ARGB windows. Bad in performance, with driver-dependent behavior. The name of the switch may change without prior notifications.
@@ -209,13 +206,10 @@ A 7x7 Gaussian blur kernel (sigma = 0.84089642) looks like:
 --blur-kern '7,7,0.000003,0.000102,0.000849,0.001723,0.000849,0.000102,0.000003,0.000102,0.003494,0.029143,0.059106,0.029143,0.003494,0.000102,0.000849,0.029143,0.243117,0.493069,0.243117,0.029143,0.000849,0.001723,0.059106,0.493069,0.493069,0.059106,0.001723,0.000849,0.029143,0.243117,0.493069,0.243117,0.029143,0.000849,0.000102,0.003494,0.029143,0.059106,0.029143,0.003494,0.000102,0.000003,0.000102,0.000849,0.001723,0.000849,0.000102,0.000003'
 ----
 +
-May also be one of the predefined kernels: `3x3box` (default), `5x5box`, `7x7box`, `3x3gaussian`, `5x5gaussian`, `7x7gaussian`, `9x9gaussian`, `11x11gaussian`. All Gaussian kernels are generated with sigma = 0.84089642 . If you find yourself needing to generate custom blur kernels, you might want to try the new blur configuration (See *BLUR*).
+May also be one of the predefined kernels: `3x3box` (default), `5x5box`, `7x7box`, `3x3gaussian`, `5x5gaussian`, `7x7gaussian`, `9x9gaussian`, `11x11gaussian`. All Gaussian kernels are generated with sigma = 0.84089642 . If you find yourself needing to generate custom blur kernels, you might want to try the new blur configuration (see the xref:_blur[*BLUR*] section).
 
 [[blur-background-exclude]]*--blur-background-exclude* _CONDITION_::
 	Exclude conditions for background blur.
-
-*--resize-damage* _INTEGER_::
-	Resize damaged region by a specific number of pixels. A positive value enlarges it while a negative one shrinks it. If the value is positive, those additional pixels will not be actually painted to screen, only used in blur calculation, and such. (Due to technical limitations, with *--use-damage*, those pixels will still be incorrectly painted to screen.) Primarily used to fix the line corruption issues of blur, in which case you should use the blur radius value here (e.g. with a 3x3 kernel, you should use `--resize-damage 1`, with a 5x5 one you use `--resize-damage 2`, and so on). May or may not work with *--glx-no-stencil*. Only works with *--legacy-backends*. Shrinking doesn't function correctly.
 
 [[invert-color-include]]*--invert-color-include* _CONDITION_::
 	Specify a list of conditions of windows that should be painted with inverted color. Resource-hogging, and is not well tested. Using this is discouraged, see the xref:_window_rules[*WINDOW RULES*] section for the recommended way to do this.
@@ -227,19 +221,12 @@ May also be one of the predefined kernels: `3x3box` (default), `5x5box`, `7x7box
 	Crop shadow of a window fully on a particular monitor to that monitor. This is currently implemented using the X RandR extension.
 
 *--backend* _BACKEND_::
-	Specify the backend to use: `xrender`, `glx`, or `xr_glx_hybrid`. `xrender` is the default one.
+	Specify the backend to use: `xrender` or `glx`. `xrender` is the default one.
 +
 --
 * `xrender` backend performs all rendering operations with X Render extension. It is what `xcompmgr` uses, and is generally a safe fallback when you encounter rendering artifacts or instability.
 * `glx` (OpenGL) backend performs all rendering operations with OpenGL. It is more friendly to some VSync methods, and has significantly superior performance on color inversion (*--invert-color-include*) or blur (*--blur-background*). It requires proper OpenGL 2.0 support from your driver and hardware. You may wish to look at the GLX performance optimization options below. *--xrender-sync-fence* might be needed on some systems to avoid delay in changes of screen contents.
-* `xr_glx_hybrid` backend renders the updated screen contents with X Render and presents it on the screen with GLX. It attempts to address the rendering issues some users encountered with GLX backend and enables the better VSync of GLX backends. *--vsync-use-glfinish* might fix some rendering issues with this backend.
 --
-
-*--glx-no-stencil*::
-  GLX backend: Avoid using stencil buffer, useful if you don't have a stencil buffer. Might cause incorrect opacity when rendering transparent content (but never practically happened) and may not work with *--blur-background*. My tests show a 15% performance boost. Recommended.
-
-*--glx-no-rebind-pixmap*::
-	GLX backend: Avoid rebinding pixmap on window damage. Probably could improve performance on rapid window content changes, but is known to break things on some drivers (LLVMpipe, xf86-video-intel, etc.). Recommended if it works.
 
 *--no-use-damage*::
 	Disable the use of damage information. This cause the whole screen to be redrawn every time, instead of the part of the screen has actually changed. Potentially degrades the performance, but might fix some artifacts.
@@ -247,14 +234,11 @@ May also be one of the predefined kernels: `3x3box` (default), `5x5box`, `7x7box
 *--xrender-sync-fence*::
 	Use X Sync fence to sync clients' draw calls, to make sure all draw calls are finished before picom starts drawing. Needed on nvidia-drivers with GLX backend for some users.
 
-*--glx-fshader-win* _SHADER_::
-	GLX backend: Use specified GLSL fragment shader for rendering window contents. See `compton-default-fshader-win.glsl` and `compton-fake-transparency-fshader-win.glsl` in the source tree for examples. Only works with *--legacy-backends* enabled.
-
 *--force-win-blend*::
-	Force all windows to be painted with blending. Useful if you have a *--glx-fshader-win* that could turn opaque pixels transparent.
+	Force all windows to be painted with blending. Useful if you have a window shader that could turn opaque pixels transparent.
 
 *--dbus*::
-	Enable remote control via D-Bus. See the *D-BUS API* section below for more details.
+	Enable remote control via D-Bus. See the xref:_d_bus_api[*D-BUS API*] section below for more details.
 
 *--benchmark* _CYCLES_::
 	Benchmark mode. Repeatedly paint until reaching the specified cycles.
@@ -275,10 +259,10 @@ May also be one of the predefined kernels: `3x3box` (default), `5x5box`, `7x7box
 	Specify a list of conditions of windows that should never have transparent clipping applied. Useful for screenshot tools, where you need to be able to see through transparent parts of the window.
 
 *--window-shader-fg* _SHADER_::
-	Specify GLSL fragment shader path for rendering window contents. Does not work when *--legacy-backends* is enabled. Shader is searched first relative to the directory the configuration file is in, then in the usual places for a configuration file. See section xref:_shader_interface[*SHADER INTERFACE*] below for more details on the interface.
+	Specify GLSL fragment shader path for rendering window contents. Shader is searched first relative to the directory the configuration file is in, then in the usual places for a configuration file. See section xref:_shader_interface[*SHADER INTERFACE*] below for more details on the interface.
 
 [[window-shader-fg-rule]]*--window-shader-fg-rule* _SHADER_:__CONDITION__::
-	Specify GLSL fragment shader path for rendering window contents using patterns. Similar to *--opacity-rule*, arguments should be in the format of _SHADER:CONDITION_, e.g. "shader.frag:name = 'window'". Leading and trailing whitespaces in _SHADER_ will be trimmed. If _SHADER_ is "default", then the default shader will be used for the matching windows. (This also unfortunately means you can't use a shader file named "default"). Does not work when *--legacy-backends* is enabled. Using this is discouraged, see the xref:_window_rules[*WINDOW RULES*] section for the recommended way to set window-specific shaders.
+	Specify GLSL fragment shader path for rendering window contents using patterns. Similar to *--opacity-rule*, arguments should be in the format of _SHADER:CONDITION_, e.g. "shader.frag:name = 'window'". Leading and trailing whitespaces in _SHADER_ will be trimmed. If _SHADER_ is "default", then the default shader will be used for the matching windows. (This also unfortunately means you can't use a shader file named "default"). Using this is discouraged, see the xref:_window_rules[*WINDOW RULES*] section for the recommended way to set window-specific shaders.
 
 *--dithered-present*::
 	Use higher precision during rendering, and apply dither when presenting the rendered screen. Reduces banding artifacts, but might cause performance degradation. Only works with OpenGL.
@@ -765,11 +749,11 @@ If you have created an animation script that you think is particularly cool, you
 SHADER INTERFACE
 ----------------
 
-This secion describes the interface of a custom shader, how it is used by picom, and what parameters are passed by picom to the shader. This does not apply to the legacy backends.
+This section describes the interface of a custom shader, how it is used by picom, and what parameters are passed by picom to the shader.
 
 A custom shader is a GLSL fragment shader program, which can be used to override the default way of how a window is rendered. If a custom shader is used, the default picom effects (e.g. dimming, color inversion, etc.) will no longer be automatically applied. It would be the custom shader's responsibility to apply these effects.
 
-The interface between picom and a custom shader is dependent on which backend is being used. The xrender backend doesn't support shader at all. Here we descibe the interface provided by the glx backend.
+The interface between picom and a custom shader is dependent on which backend is being used. The xrender backend doesn't support shader at all. Here we describe the interface provided by the glx backend.
 
 The shader must define a function, _vec4 window_shader()_, which would be the entry point of the shader. The returned _vec4_ will be used to set __gl_FragColor__. A function, _vec4 default_post_processing(vec4 c)_, is provided for applying the default picom effects to input color 'c'.
 
@@ -886,7 +870,6 @@ Available options of the _blur_ section are: ::
   *method*:::
     A string. Controls the blur method. Corresponds to the *--blur-method* command line option. Available choices are:
       _none_ to disable blurring; _gaussian_ for gaussian blur; _box_ for box blur; _kernel_ for convolution blur with a custom kernel; _dual_kawase_ for dual-filter kawase blur.
-    Note: _gaussian_, _box_ and _dual_kawase_ blur methods are not supported by the legacy backends.
     (default: none)
 
   *size*:::
