@@ -355,6 +355,9 @@ typedef struct options {
 	double frame_opacity_for_same_colors_tolerance;
 	// Make different colors opaque by a factor of x (default 5)
 	int frame_opacity_for_same_colors_multiplier;
+	// Draw border inside the windows with the defined brightess
+	int inner_border_width;
+	double inner_border_brightness;
 	/// Whether to detect _NET_WM_WINDOW_OPACITY on client windows. Used on window
 	/// managers that don't pass _NET_WM_WINDOW_OPACITY to frame windows.
 	bool detect_client_opacity;

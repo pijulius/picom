@@ -1223,6 +1223,8 @@ struct win *win_maybe_allocate(session_t *ps, struct wm_ref *cursor,
 	    .frame_opacity_for_same_colors = false,
 	    .frame_opacity_for_same_colors_tolerance = 0.5,
 	    .frame_opacity_for_same_colors_multiplier = 5,
+	    .inner_border_width = 0,
+	    .inner_border_brightness = 0.89,
 	    .in_openclose = true,        // set to false after first map is done,
 	                                 // true here because window is just created
 	    .flags = 0,                  // updated by
@@ -1269,6 +1271,11 @@ struct win *win_maybe_allocate(session_t *ps, struct wm_ref *cursor,
 	*new = win_def;
 	new->a = *attrs;
 	new->shadow_opacity = ps->o.shadow_opacity;
+	new->frame_opacity_for_same_colors = ps->o.frame_opacity_for_same_colors;
+	new->frame_opacity_for_same_colors_tolerance = ps->o.frame_opacity_for_same_colors_tolerance;
+	new->frame_opacity_for_same_colors_multiplier = ps->o.frame_opacity_for_same_colors_multiplier;
+	new->inner_border_width = ps->o.inner_border_width;
+	new->inner_border_brightness = ps->o.inner_border_brightness;
 	pixman_region32_init(&new->bounding_shape);
 
 	xcb_generic_error_t *e;

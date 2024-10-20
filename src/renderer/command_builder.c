@@ -74,6 +74,8 @@ commands_for_window_body(struct layer *layer, struct backend_command *cmd_base,
 	    .frame_opacity_for_same_colors_tolerance = w->frame_opacity_for_same_colors_tolerance,
 	    .frame_opacity_for_same_colors_multiplier =
 	        w->frame_opacity_for_same_colors_multiplier,
+	    .inner_border_width = w->inner_border_width,
+	    .inner_border_brightness = w->inner_border_brightness,
 	    .dim = dim,
 	    .scale = layer->scale,
 	    .effective_size = layer->window.size,

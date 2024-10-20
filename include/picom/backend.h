@@ -155,6 +155,9 @@ struct backend_blit_args {
 	double frame_opacity_for_same_colors_tolerance;
 	// Make different colors opaque by a factor of x (default 5)
 	int frame_opacity_for_same_colors_multiplier;
+	// Draw inner border with the defined brightness (default 0)
+	int inner_border_width;
+	double inner_border_brightness;
 };
 
 enum backend_image_format {

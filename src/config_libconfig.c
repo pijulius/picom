@@ -838,6 +838,12 @@ bool parse_config_libconfig(options_t *opt, const char *config_file) { /*NOLINT(
 	// --frame-opacity-for-same-colors-multiplier
 	config_lookup_int(&cfg, "frame-opacity-for-same-colors-multiplier",
 	                  &opt->frame_opacity_for_same_colors_multiplier);
+	// --inner-border-width
+	config_lookup_int(&cfg, "inner-border-width",
+	                  &opt->inner_border_width);
+	// --inner-border-brightness
+	config_lookup_float(&cfg, "inner-border-brightness",
+	                  &opt->inner_border_brightness);
 	// -c (shadow_enable)
 	lcfg_lookup_bool(&cfg, "shadow", &opt->shadow_enable);
 	// -f (fading_enable)

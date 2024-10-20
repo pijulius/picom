@@ -190,6 +190,9 @@ struct win {
 	double frame_opacity_for_same_colors_tolerance;
 	// Make different colors opaque by a factor of x (default 5)
 	int frame_opacity_for_same_colors_multiplier;
+	// Draw border inside windows default 0)
+	int inner_border_width;
+	double inner_border_brightness;
 	/// Frame extents. Acquired from _NET_FRAME_EXTENTS.
 	margin_t frame_extents;
 

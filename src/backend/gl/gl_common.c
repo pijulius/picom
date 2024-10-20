@@ -586,6 +586,8 @@ gl_lower_blit_args(struct gl_data *gd, ivec2 origin, const struct backend_blit_a
 	    [UNIFORM_FRAME_OPACITY_FSC_LOC]  = {.type = GL_INT, .i = args->frame_opacity_for_same_colors},
 	    [UNIFORM_FRAME_OPACITY_FSCT_LOC]  = {.type = GL_FLOAT, .f = (float)args->frame_opacity_for_same_colors_tolerance},
 	    [UNIFORM_FRAME_OPACITY_FSCM_LOC]  = {.type = GL_INT, .i = (int)args->frame_opacity_for_same_colors_multiplier},
+	    [UNIFORM_INNER_BORDER_WIDTH_LOC]  = {.type = GL_INT, .i = (int)args->inner_border_width},
+	    [UNIFORM_INNER_BORDER_BRT_LOC]  = {.type = GL_FLOAT, .f = (float)args->inner_border_brightness},
 	};
 	// clang-format on
 

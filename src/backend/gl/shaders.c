@@ -139,6 +139,10 @@ const char blit_shader_glsl[] = GLSL(330,
 	uniform float frame_opacity_fsct;
 	layout(location = UNIFORM_FRAME_OPACITY_FSCM_LOC)
 	uniform int frame_opacity_fscm;
+	layout(location = UNIFORM_INNER_BORDER_WIDTH_LOC)
+	uniform int inner_border_width;
+	layout(location = UNIFORM_INNER_BORDER_BRT_LOC)
+	uniform float inner_border_brightness;
 	// Signed distance field for rectangle center at (0, 0), with size of
 	// half_size * 2
 	// Returns 2 number: the distance, and the approximate chord length inside
@@ -153,7 +157,8 @@ const char blit_shader_glsl[] = GLSL(330,
 	vec4 default_post_processing(vec4 c) {
 		float additional_opacity = 1;
 		if (frame_opacity_fsc && frame_opacity > 0 && frame_opacity < 1) {
-			vec4 frame_color = texelFetch(tex, ivec2(border_width + 1, border_width + 1), 0);
+			vec4 frame_color = texelFetch(tex, 
+				ivec2(border_width + 1 + inner_border_width, border_width + 1 + inner_border_width), 0);
 			float color_diff = max(max(c.r - frame_color.r, c.g - frame_color.g), c.b - frame_color.b);
 			if (color_diff < 0)
 				color_diff *= -1;
@@ -165,6 +170,27 @@ const char blit_shader_glsl[] = GLSL(330,
 			}
 		}
 		vec4 border_color = texture(tex, vec2(0.0, 0.5));
+		if (inner_border_width > 0) {
+			if (texcoord.x <= inner_border_width || texcoord.y <= inner_border_width || 
+				texcoord.x >= effective_size.x-inner_border_width || texcoord.y >= effective_size.y-inner_border_width)
+			{
+				border_color.rgb = c.rgb = c.rgb * inner_border_brightness;
+			} else if (corner_radius > 0) {
+				if (texcoord.x <= 1+corner_radius &&
+					(texcoord.y <= 1+corner_radius || texcoord.y >= effective_size.y-1-corner_radius))
+				{
+					border_color.rgb =
+						texelFetch(tex, ivec2(0, texcoord.y), 0).rgb *
+						inner_border_brightness * 0.98;
+				} else if (texcoord.x >= effective_size.x-1-corner_radius &&
+					(texcoord.y <= 1+corner_radius || texcoord.y >= effective_size.y-1-corner_radius))
+				{
+					border_color.rgb =
+						texelFetch(tex, ivec2(effective_size.x-1, texcoord.y), 0).rgb *
+						inner_border_brightness * 0.98;
+				}
+			}
+		}
 		if (invert_color) {
 			c = vec4(c.aaa - c.rgb, c.a);
 			border_color = vec4(border_color.aaa - border_color.rgb, border_color.a);
@@ -186,7 +212,7 @@ const char blit_shader_glsl[] = GLSL(330,
 			// Rim color is the color of the outer rim of the window, if there is no
 			// border, it's the color of the window itself, otherwise it's the border.
 			// Using mix() to avoid a branch here.
-			vec4 rim_color = mix(c, border_color, clamp(border_width, 0.0f, 1.0f));
+			vec4 rim_color = mix(c, border_color, clamp(border_width + inner_border_width, 0.0f, 1.0f));
 
 			vec2 outer_size = effective_size;
 			vec2 inner_size = outer_size - vec2(corner_radius) * 2.0f;
@@ -203,7 +229,8 @@ const char blit_shader_glsl[] = GLSL(330,
 			if (rect_distance > 0.0f) {
 				c = (1.0f - clamp(rect_distance, 0.0f, sdf.y) / (sdf.y + 1e-8)) * rim_color;
 			} else {
-				float factor = clamp(rect_distance + border_width, 0.0f, sdf.y) / (sdf.y + 1e-8);
+				float factor = clamp(rect_distance + border_width + inner_border_width, 0.0f, sdf.y) /
+					(sdf.y + 1e-8);
 				c = (1.0f - factor) * c + factor * border_color;
 			}
 		}
