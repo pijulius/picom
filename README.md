@@ -19,8 +19,11 @@ See [Releases](https://github.com/yshui/picom/releases)
 
 This fork adds some fixes/enhancements that may not be considered correcty/fully integrated but they do work for me personally and use them 24/7 so will have it here for everyone to play with :)
 
-* Desktop Switching Animation support https://github.com/yshui/picom/pull/1262
-* Possibility for frame opacity to include menubar/toolbar and so on https://github.com/yshui/picom/pull/1261#issuecomment-2132154214
+* Desktop Switching Animation support [cee741a462466156d79f491f12b675388c6deb22](https://github.com/pijulius/picom/commit/cee741a462466156d79f491f12b675388c6deb22)
+* Possibility for frame opacity to include menubar/toolbar and so on [968112a501478406902b31bdb3294f456b03f1d2](https://github.com/pijulius/picom/commit/968112a501478406902b31bdb3294f456b03f1d2)
+* Possibility to add inner border around windows by turning down the brightness of the pixels on the edge of the window [a07e09b7ad0c6b2eaec48018f3e4c4ac73b0da6f](https://github.com/pijulius/picom/commit/a07e09b7ad0c6b2eaec48018f3e4c4ac73b0da6f)
+
+![Screenshot of the features like transparent windows/header bars, borders around windows](https://github.com/pijulius/picom/blob/next/screenshot.pijulius.png?raw=true)
 
 If you want to use the old animation developed by [@dccsillag](https://github.com/dccsillag/picom) it is still available under the [implement-window-animations](https://github.com/pijulius/picom/tree/implement-window-animations) branch.
 
