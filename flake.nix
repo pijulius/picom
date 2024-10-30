@@ -18,9 +18,8 @@
     let
       # like lib.lists.remove, but takes a list of elements to remove
       removeFromList = toRemove: list: pkgs.lib.foldl (l: e: pkgs.lib.remove e l) list toRemove;
-      picomOverlay = final: prev: { picom = prev.callPackage ./package.nix { }; };
+      picomOverlay = final: prev: { picom = prev.callPackage ./package.nix { inherit git-ignore-nix; }; };
       overlays = [
-        (final: prev: { inherit git-ignore-nix; })
         picomOverlay
       ];
       pkgs = import nixpkgs {
