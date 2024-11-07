@@ -290,25 +290,6 @@ winprop_t x_get_prop_with_offset(const struct x_connection *c, xcb_window_t w, x
 	    .ptr = NULL, .nitems = 0, .type = XCB_GET_PROPERTY_TYPE_ANY, .format = 0};
 }
 
-/// Get the type, format and size in bytes of a window's specific attribute.
-winprop_info_t x_get_prop_info(const struct x_connection *c, xcb_window_t w, xcb_atom_t atom) {
-	xcb_generic_error_t *e = NULL;
-	auto r = xcb_get_property_reply(
-	    c->c, xcb_get_property(c->c, 0, w, atom, XCB_ATOM_ANY, 0, 0), &e);
-	if (!r) {
-		log_debug_x_error(e, "Failed to get property info for window %#010x", w);
-		free(e);
-		return (winprop_info_t){
-		    .type = XCB_GET_PROPERTY_TYPE_ANY, .format = 0, .length = 0};
-	}
-
-	winprop_info_t winprop_info = {
-	    .type = r->type, .format = r->format, .length = r->bytes_after};
-	free(r);
-
-	return winprop_info;
-}
-
 /**
  * Get the value of a type-<code>xcb_window_t</code> property of a window.
  *
