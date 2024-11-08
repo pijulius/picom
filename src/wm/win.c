@@ -215,10 +215,14 @@ static inline void win_release_mask(backend_t *base, struct win *w) {
 	}
 }
 
-static inline void win_release_saved_win_image(backend_t *base, struct win *w) {
+void win_release_saved_win_image(backend_t *base, struct win *w) {
 	if (w->saved_win_image) {
-		base->ops.release_image(base, w->saved_win_image);
+		xcb_pixmap_t pixmap = XCB_NONE;
+		pixmap = base->ops.release_image(base, w->saved_win_image);
 		w->saved_win_image = NULL;
+		if (pixmap != XCB_NONE) {
+			xcb_free_pixmap(base->c->c, pixmap);
+		}
 	}
 }
 
@@ -1860,9 +1864,7 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 	if (win_check_flags_any(w, WIN_FLAGS_PIXMAP_STALE)) {
 		// Grab the old pixmap, animations might need it
 		if (w->saved_win_image) {
-			ps->backend_data->ops.release_image(ps->backend_data,
-			                                    w->saved_win_image);
-			w->saved_win_image = NULL;
+			win_release_saved_win_image(ps->backend_data, w);
 		}
 		if (ps->drivers & DRIVER_NVIDIA) {
 			// NVIDIA doesn't like us grabbing the new pixmap before releasing
