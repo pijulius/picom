@@ -1731,7 +1731,10 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 	bool will_never_render =
 	    (!w->ever_damaged || w->win_image == NULL) && w->state != WSTATE_MAPPED;
 	auto win_ctx = win_script_context_prepare(ps, w);
-	bool geometry_changed = !win_geometry_eq(w->previous.g, w->g);
+
+	bool size_changed = win_size_changed(w->previous.g, w->g);
+	bool position_changed = win_position_changed(w->previous.g, w->g);
+
 	auto old_state = w->previous.state;
 
 	w->previous.state = w->state;
@@ -1742,7 +1745,7 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 		// This window won't be rendered, so we don't need to run the animations.
 		bool state_changed = old_state != w->state ||
 		                     win_ctx.opacity_before != win_ctx.opacity ||
-		                     geometry_changed;
+		                     size_changed || position_changed;
 		return state_changed || (w->running_animation_instance != NULL);
 	}
 
@@ -1757,7 +1760,7 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 	enum animation_trigger trigger = ANIMATION_TRIGGER_INVALID;
 
 	// Animation trigger priority:
-	//   state > geometry > opacity
+	//   state > position > size > opacity
 	if (old_state != w->state) {
 		// Send D-Bus signal
 		if (ps->o.dbus) {
@@ -1818,9 +1821,12 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 			assert(false);
 			return true;
 		}
-	} else if (geometry_changed) {
+	} else if (position_changed) {
 		assert(w->state == WSTATE_MAPPED);
-		trigger = ANIMATION_TRIGGER_GEOMETRY;
+		trigger = ANIMATION_TRIGGER_POSITION;
+	} else if (size_changed) {
+		assert(w->state == WSTATE_MAPPED);
+		trigger = ANIMATION_TRIGGER_SIZE;
 	} else if (win_ctx.opacity_before != win_ctx.opacity) {
 		assert(w->state == WSTATE_MAPPED);
 		trigger = win_ctx.opacity > win_ctx.opacity_before
@@ -1909,7 +1915,7 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 			memory[output_indices[WIN_SCRIPT_SAVED_IMAGE_BLEND]] =
 			    1 - memory[output_indices[WIN_SCRIPT_SAVED_IMAGE_BLEND]];
 		}
-		if (geometry_changed) {
+		if (size_changed || position_changed) {
 			// If the window has moved, we need to adjust scripts
 			// outputs so that the window will stay in the same position and
 			// size after applying the animation. This way the window's size

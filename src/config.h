@@ -79,9 +79,18 @@ enum animation_trigger {
 	ANIMATION_TRIGGER_WORKSPACE_OUT_INVERSE,
 	/// When a window's geometry changes
 	ANIMATION_TRIGGER_GEOMETRY,
+	/// When a window's size changes
+	ANIMATION_TRIGGER_SIZE,
+	/// When a window's position changes
+	ANIMATION_TRIGGER_POSITION,
 
 	ANIMATION_TRIGGER_INVALID,
 	ANIMATION_TRIGGER_COUNT = ANIMATION_TRIGGER_INVALID,
+
+	// Aliases are not included in the count
+
+	/// Alias of size + position
+	ANIMATION_TRIGGER_ALIAS_GEOMETRY,
 };
 
 static const char *animation_trigger_names[] attr_unused = {
@@ -96,6 +105,9 @@ static const char *animation_trigger_names[] attr_unused = {
     [ANIMATION_TRIGGER_WORKSPACE_OUT] = "workspace-out",
     [ANIMATION_TRIGGER_WORKSPACE_OUT_INVERSE] = "workspace-out-inverse",
     [ANIMATION_TRIGGER_GEOMETRY] = "geometry",
+    [ANIMATION_TRIGGER_SIZE] = "size",
+    [ANIMATION_TRIGGER_POSITION] = "position",
+    [ANIMATION_TRIGGER_ALIAS_GEOMETRY] = "geometry",
 };
 
 struct script;
