@@ -423,6 +423,19 @@ static bool parse_animation_one(struct win_script *animations,
 		config_setting_remove(setting, "suppressions");
 	}
 
+	if ((result.suppressions & (1 << ANIMATION_TRIGGER_ALIAS_GEOMETRY)) != 0) {
+		const uint64_t to_set =
+		    (1 << ANIMATION_TRIGGER_SIZE) | (1 << ANIMATION_TRIGGER_POSITION);
+		if ((result.suppressions & to_set) != 0) {
+			log_warn("Trigger \"geometry\" is an alias of \"size\" and "
+			         "\"position\", but one or both of them are also set at "
+			         "line %d",
+			         config_setting_source_line(suppressions_setting));
+		}
+		result.suppressions |= to_set;
+	}
+	result.suppressions &= (1 << ANIMATION_TRIGGER_COUNT) - 1;
+
 	char *err;
 	if (!compile_win_script(&result, setting, &err)) {
 		log_error("Failed to parse animation script at line %d: %s",

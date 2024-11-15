@@ -1426,7 +1426,7 @@ cdbus_process_windows(DBusConnection *conn, DBusMessage *msg, void *ud) {
 			goto finished;
 		}
 		auto trigger = parse_animation_trigger(trigger_str);
-		if (trigger == ANIMATION_TRIGGER_INVALID) {
+		if (trigger >= ANIMATION_TRIGGER_INVALID) {
 			dbus_set_error(&err, CDBUS_ERROR_BADTGT, CDBUS_ERROR_BADTGT_S,
 			               trigger_str);
 			goto finished;
