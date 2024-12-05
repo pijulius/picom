@@ -1284,20 +1284,6 @@ static DBusHandlerResult cdbus_process(DBusConnection *conn, DBusMessage *msg, v
 
 	if (dbus_message_is_method_call(msg, DBUS_INTERFACE_INTROSPECTABLE, "Introspect")) {
 		ret = cdbus_process_introspect(reply);
-	} else if (dbus_message_is_method_call(msg, DBUS_INTERFACE_PEER, "Ping")) {
-		// Intentionally left blank
-	} else if (dbus_message_is_method_call(msg, DBUS_INTERFACE_PEER, "GetMachineId")) {
-		if (reply != NULL) {
-			char *uuid = dbus_get_local_machine_id();
-			if (uuid) {
-				if (!cdbus_append_string(reply, uuid)) {
-					ret = DBUS_HANDLER_RESULT_NEED_MEMORY;
-				}
-				dbus_free(uuid);
-			} else {
-				ret = DBUS_HANDLER_RESULT_NEED_MEMORY;
-			}
-		}
 	} else if (strcmp(interface, CDBUS_INTERFACE_NAME) != 0) {
 		dbus_set_error_const(&err, DBUS_ERROR_UNKNOWN_INTERFACE, NULL);
 	} else {
