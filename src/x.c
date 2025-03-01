@@ -7,6 +7,7 @@
 
 #include <X11/Xlib-xcb.h>
 #include <X11/Xutil.h>
+#include <X11/extensions/syncconst.h>
 #include <pixman.h>
 #include <xcb/composite.h>
 #include <xcb/damage.h>
@@ -40,12 +41,6 @@ static inline uint64_t x_widen_sequence(struct x_connection *c, uint32_t sequenc
 }
 
 // === Error handling ===
-
-enum {
-	XSyncBadCounter = 0,
-	XSyncBadAlarm = 1,
-	XSyncBadFence = 2,
-};
 
 /// Convert a X11 error to string
 ///
@@ -881,10 +876,6 @@ const char *x_strerror(struct x_connection *c, const xcb_generic_error_t *e) {
 	}
 	return x_error_code_to_string(c, e->full_sequence, e->major_code, e->minor_code,
 	                              e->error_code);
-}
-
-void x_flush(struct x_connection *c) {
-	xcb_flush(c->c);
 }
 
 /**
