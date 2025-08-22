@@ -44,7 +44,10 @@ struct gl_blur_context;
 #define UNIFORM_FRAME_OPACITY_FSCM_LOC 25
 #define UNIFORM_INNER_BORDER_WIDTH_LOC 26
 #define UNIFORM_INNER_BORDER_BRT_LOC 27
-#define NUMBER_OF_UNIFORMS (UNIFORM_INNER_BORDER_BRT_LOC + 1)
+
+// Added in backend API 2.0
+#define UNIFORM_TINT_LOC 28
+#define NUMBER_OF_UNIFORMS (UNIFORM_TINT_LOC + 1)
 
 struct gl_shader {
 	GLuint prog;

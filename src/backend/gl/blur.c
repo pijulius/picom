@@ -2,27 +2,33 @@
 #include <stdbool.h>
 
 #include "backend/backend_common.h"
+#include "utils/misc.h"
 
 #include "gl_common.h"
 
 struct gl_blur_context {
-	enum blur_method method;
 	struct gl_shader *blur_shader;
 
 	/// Temporary textures used for blurring
 	GLuint *blur_textures;
-	int blur_texture_count;
 	/// Temporary fbos used for blurring
 	GLuint *blur_fbos;
+
+	int blur_texture_count;
 	int blur_fbo_count;
 
-	/// Cached dimensions of each blur_texture. They are the same size as the target,
-	/// so they are always big enough without resizing.
+	/// Cached dimensions of each blur_texture. They keep growing to accommodate each
+	/// source image it gets. The hope is soon it gets big enough and we stop
+	/// resizing.
 	/// Turns out calling glTexImage to resize is expensive, so we avoid that.
 	struct texture_size {
 		int width;
 		int height;
 	} *texture_sizes;
+
+	/// Final render target size, used to detect root size change and triggers
+	/// blur_texture shrinking to reduce memory usage.
+	uint64_t root_size;
 
 	/// Cached dimensions of the offscreen framebuffer. It's the same size as the
 	/// target but is expanded in either direction by resize_width / resize_height.
@@ -34,6 +40,8 @@ struct gl_blur_context {
 	int npasses;
 
 	enum backend_image_format format;
+
+	enum blur_method method;
 };
 
 // TODO(yshui) small optimization for kernel blur, if source and target are different,
@@ -127,6 +135,7 @@ static bool gl_kernel_blur(double opacity, struct gl_blur_context *bctx,
 			glBindFramebuffer(GL_FRAMEBUFFER, target_fbo);
 
 			glUniform1f(UNIFORM_OPACITY_LOC, (float)opacity);
+			glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		}
 
 		glDrawElements(GL_TRIANGLES, nelems, GL_UNSIGNED_INT, NULL);
@@ -251,6 +260,7 @@ bool gl_dual_kawase_blur(double opacity, struct gl_blur_context *bctx,
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target_fbo);
 
 			glUniform1f(UNIFORM_OPACITY_LOC, (GLfloat)opacity);
+			glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		}
 
 		glUniform1f(UNIFORM_SCALE_LOC, (GLfloat)scale_factor);
@@ -263,13 +273,19 @@ bool gl_dual_kawase_blur(double opacity, struct gl_blur_context *bctx,
 	return true;
 }
 
-static bool
-gl_blur_context_preallocate_textures(struct gl_blur_context *bctx, ivec2 source_size) {
-	if (source_size.width != bctx->fb_width || source_size.height != bctx->fb_height) {
-		// Resize the temporary textures used for blur in case the root
-		// size changed
-		bctx->fb_width = source_size.width;
-		bctx->fb_height = source_size.height;
+static bool gl_blur_context_preallocate_textures(struct gl_blur_context *bctx,
+                                                 ivec2 source_size, uint64_t root_size) {
+	if (root_size != bctx->root_size) {
+		bctx->root_size = root_size;
+		bctx->fb_width = 0;
+		bctx->fb_height = 0;
+	}
+
+	if (source_size.width > bctx->fb_width || source_size.height > bctx->fb_height) {
+		// Resize the temporary textures used for blur in case the source image
+		// can't fit.
+		bctx->fb_width = max2(bctx->fb_width, source_size.width);
+		bctx->fb_height = max2(bctx->fb_height, source_size.height);
 
 		for (int i = 0; i < bctx->blur_texture_count; ++i) {
 			auto tex_size = bctx->texture_sizes + i;
@@ -337,8 +353,9 @@ bool gl_blur(struct backend_base *base, ivec2 origin, image_handle target_,
 		return true;
 	}
 
+	uint64_t root_size = (uint64_t)gd->back_image.height * (uint64_t)gd->back_image.width;
 	if (!gl_blur_context_preallocate_textures(
-	        bctx, (ivec2){source->width, source->height})) {
+	        bctx, (ivec2){source->width, source->height}, root_size)) {
 		return false;
 	}
 
@@ -360,7 +377,7 @@ bool gl_blur(struct backend_base *base, ivec2 origin, image_handle target_,
 	// we never actually use that capability anywhere.
 	assert(source->y_inverted);
 
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_ONE, GL_ZERO);
 	glBindVertexArray(gd->vertex_array_objects[0]);
 	glBindBuffer(GL_ARRAY_BUFFER, gd->buffer_objects[0]);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gd->buffer_objects[1]);

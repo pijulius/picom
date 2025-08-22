@@ -81,6 +81,7 @@ struct win_state_change {
 	winstate_t state;
 	double opacity;
 	struct win_geometry g;
+	struct color shadow_color;
 };
 
 struct win {
@@ -95,7 +96,10 @@ struct win {
 	/// How much to scale the saved_win_image, so that it is the same size as the
 	/// current window image.
 	vec2 saved_win_image_scale;
-	image_handle shadow_image;
+	/// A mask image for the shadow. This is usually a blurred `mask_image`, though
+	/// for some backends this can be generated on the CPU.
+	image_handle shadow_mask;
+	/// A mask image for the shape of the window.
 	image_handle mask_image;
 
 	// Core members
@@ -241,28 +245,37 @@ struct win_script_context {
 	double opacity_before, opacity;
 	double monitor_x, monitor_y;
 	double monitor_width, monitor_height;
+	struct color shadow_color, shadow_color_before;
 };
 // NOLINTNEXTLINE(bugprone-sizeof-expression)
 static_assert(SCRIPT_CTX_PLACEHOLDER_BASE > sizeof(struct win_script_context),
               "win_script_context too large");
 
+#define X(name) offsetof(struct win_script_context, name)
 static const struct script_context_info win_script_context_info[] = {
-    {"window-x", offsetof(struct win_script_context, x)},
-    {"window-y", offsetof(struct win_script_context, y)},
-    {"window-width", offsetof(struct win_script_context, width)},
-    {"window-height", offsetof(struct win_script_context, height)},
-    {"window-x-before", offsetof(struct win_script_context, x_before)},
-    {"window-y-before", offsetof(struct win_script_context, y_before)},
-    {"window-width-before", offsetof(struct win_script_context, width_before)},
-    {"window-height-before", offsetof(struct win_script_context, height_before)},
-    {"window-raw-opacity-before", offsetof(struct win_script_context, opacity_before)},
-    {"window-raw-opacity", offsetof(struct win_script_context, opacity)},
-    {"window-monitor-x", offsetof(struct win_script_context, monitor_x)},
-    {"window-monitor-y", offsetof(struct win_script_context, monitor_y)},
-    {"window-monitor-width", offsetof(struct win_script_context, monitor_width)},
-    {"window-monitor-height", offsetof(struct win_script_context, monitor_height)},
+    {"window-x", X(x)},
+    {"window-y", X(y)},
+    {"window-width", X(width)},
+    {"window-height", X(height)},
+    {"window-x-before", X(x_before)},
+    {"window-y-before", X(y_before)},
+    {"window-width-before", X(width_before)},
+    {"window-height-before", X(height_before)},
+    {"window-raw-opacity-before", X(opacity_before)},
+    {"window-raw-opacity", X(opacity)},
+    {"window-monitor-x", X(monitor_x)},
+    {"window-monitor-y", X(monitor_y)},
+    {"window-monitor-width", X(monitor_width)},
+    {"window-monitor-height", X(monitor_height)},
+    {"window-shadow-red", X(shadow_color.red)},
+    {"window-shadow-green", X(shadow_color.green)},
+    {"window-shadow-blue", X(shadow_color.blue)},
+    {"window-shadow-red-before", X(shadow_color_before.red)},
+    {"window-shadow-green-before", X(shadow_color_before.green)},
+    {"window-shadow-blue-before", X(shadow_color_before.blue)},
     {NULL, 0}        //
 };
+#undef X
 
 static const struct script_output_info win_script_outputs[] = {
     [WIN_SCRIPT_OFFSET_X] = {"offset-x"},
@@ -281,6 +294,9 @@ static const struct script_output_info win_script_outputs[] = {
     [WIN_SCRIPT_CROP_WIDTH] = {"crop-width"},
     [WIN_SCRIPT_CROP_HEIGHT] = {"crop-height"},
     [WIN_SCRIPT_SAVED_IMAGE_BLEND] = {"saved-image-blend"},
+    [WIN_SCRIPT_SHADOW_RED] = {"shadow-red"},
+    [WIN_SCRIPT_SHADOW_GREEN] = {"shadow-green"},
+    [WIN_SCRIPT_SHADOW_BLUE] = {"shadow-blue"},
     [NUM_OF_WIN_SCRIPT_OUTPUTS] = {NULL},
 };
 
@@ -325,6 +341,8 @@ win_maybe_options_fold(struct window_maybe_options upper, struct window_maybe_op
 	    .dim = !safe_isnan(upper.dim) ? upper.dim : lower.dim,
 	    .shader = upper.shader ? upper.shader : lower.shader,
 	    .corner_radius = upper.corner_radius >= 0 ? upper.corner_radius : lower.corner_radius,
+	    .is_shadow_color_set = upper.is_shadow_color_set || lower.is_shadow_color_set,
+	    .shadow_color = upper.is_shadow_color_set ? upper.shadow_color : lower.shadow_color,
 	};
 	win_script_fold(upper.animations, lower.animations, ret.animations);
 	return ret;
@@ -351,6 +369,7 @@ win_maybe_options_or(struct window_maybe_options maybe, struct window_options de
 	    .opacity = !safe_isnan(maybe.opacity) ? maybe.opacity : def.opacity,
 	    .dim = !safe_isnan(maybe.dim) ? maybe.dim : def.dim,
 	    .shader = maybe.shader ? maybe.shader : def.shader,
+	    .shadow_color = maybe.is_shadow_color_set ? maybe.shadow_color : def.shadow_color,
 	};
 	win_script_fold(maybe.animations, def.animations, ret.animations);
 	return ret;

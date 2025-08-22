@@ -9,7 +9,7 @@
 
 #include "types.h"
 
-#define PICOM_BACKEND_MAJOR (1UL)
+#define PICOM_BACKEND_MAJOR (2UL)
 #define PICOM_BACKEND_MINOR (0UL)
 #define PICOM_BACKEND_MAKE_VERSION(major, minor) ((major) * 1000 + (minor))
 
@@ -124,10 +124,12 @@ struct backend_blit_args {
 	const region_t *target_mask;
 	/// Custom shader for this blit operation.
 	void *shader;
-	/// Opacity of the source image.
-	double opacity;
-	/// Dim level of the source image.
-	double dim;
+	/// Tint. Multiply each color channel by a specific factor. i.e.
+	/// out.c = in.c * tint.c, where c = r, g, b, or a.
+	///
+	/// Note since the backends operate in pre-mult alpha mode, applying
+	/// a factor to alpha requires applying the same factor to other colors too.
+	struct color tint;
 	/// Brightness limit of the source image. Source image
 	/// will be normalized so that the maximum brightness is
 	/// this value.
@@ -343,10 +345,24 @@ struct backend_operations {
 	/// Create a new, uninitialized image with the given format and size.
 	///
 	/// @param backend_data backend data
-	/// @param format       the format of the image
-	/// @param size         the size of the image
+	/// @param format       format of the image
+	/// @param size         size of the image
 	image_handle (*new_image)(struct backend_base *backend_data,
 	                          enum backend_image_format format, ivec2 size)
+	    __attribute__((nonnull(1)));
+
+	/// Create a new image with the given format and size, and initialize it with
+	/// data. Optional, only used if backend has quirk: BACKEND_QUIRK_SLOW_BLUR.
+	///
+	/// @param backend_data backend data
+	/// @param format       format of the image
+	/// @param size         size of the image
+	/// @param pixels       data. for BACKEND_IMAGE_FORMAT_MASK, each byte is a pixel;
+	///                     for BACKEND_IMAGE_FORMAT_PIXMAP, it's 4 bytes/pixel, each
+	///                     pixel is given in the RGBA order.
+	image_handle (*new_image_from_pixels)(struct backend_base *backend_data,
+	                                      enum backend_image_format format, ivec2 size,
+	                                      int stride, const uint8_t *pixels)
 	    __attribute__((nonnull(1)));
 
 	/// Bind a X pixmap to the backend's internal image data structure.
