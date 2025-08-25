@@ -92,7 +92,7 @@ struct backend_mask_image {
 	/// rounded.
 	double corner_radius;
 	/// Origin of the mask image, in the source image's coordinate.
-	ivec2 origin;
+	vec2 origin;
 	/// Whether the mask image should be inverted.
 	bool inverted;
 };
@@ -103,6 +103,8 @@ struct backend_blur_args {
 	/// The source mask for the blur operation, may be NULL. Only parts of the source
 	/// image covered by the mask should participate in the blur operation.
 	const struct backend_mask_image *source_mask;
+	/// The scaling factor of the source mask.
+	vec2 source_mask_scale;
 	/// Region of the target image that will be covered by the blur operation, in the
 	/// source image's coordinate.
 	const region_t *target_mask;
@@ -123,7 +125,7 @@ struct backend_blit_args {
 	/// mask should be modified. This is the target's coordinate system.
 	const region_t *target_mask;
 	/// Custom shader for this blit operation.
-	void *shader;
+	const struct shader_info *shader;
 	/// Tint. Multiply each color channel by a specific factor. i.e.
 	/// out.c = in.c * tint.c, where c = r, g, b, or a.
 	///

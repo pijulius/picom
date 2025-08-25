@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 // Copyright (c) Yuxuan Shui <yshuiv7@gmail.com>
 
+#include <picom/backend.h>
 #include <picom/types.h>
 
 #include "backend/backend.h"
@@ -51,7 +52,10 @@ commands_for_window_body(struct layer *layer, struct backend_command *cmd_base,
 		}
 	}
 	if (layer->options.corner_radius > 0) {
-		win_region_remove_corners(w, layer->window.origin, &cmd->opaque_region);
+		// Scale is applied below, by region_scale.
+		win_remove_region_corners(layer->window.size, SCALE_IDENTITY,
+		                          (int)layer->options.corner_radius,
+		                          layer->window.origin, &cmd->opaque_region);
 	}
 	struct shader_info *shader = NULL;
 	if (layer->options.shader != NULL) {
@@ -81,7 +85,7 @@ commands_for_window_body(struct layer *layer, struct backend_command *cmd_base,
 	    .inner_border_brightness = w->inner_border_brightness,
 	    .scale = layer->scale,
 	    .effective_size = layer->window.size,
-	    .shader = shader != NULL ? shader->backend_shader : NULL,
+	    .shader = shader,
 	    .color_inverted = layer->options.invert_color,
 	    .source_mask = NULL,
 	    .max_brightness = max_brightness,
@@ -195,8 +199,9 @@ command_for_shadow(struct layer *layer, struct backend_command *cmd,
 				region_t mask_without_corners;
 				pixman_region32_init(&mask_without_corners);
 				pixman_region32_copy(&mask_without_corners, &j->target_mask);
-				win_region_remove_corners(layer->win, j->origin,
-				                          &mask_without_corners);
+				win_remove_region_corners(layer->window.size, layer->scale,
+				                          (int)layer->options.corner_radius,
+				                          j->origin, &mask_without_corners);
 				pixman_region32_subtract(&cmd->target_mask, &cmd->target_mask,
 				                         &mask_without_corners);
 				pixman_region32_fini(&mask_without_corners);
@@ -215,8 +220,13 @@ command_for_shadow(struct layer *layer, struct backend_command *cmd,
 	if (layer->options.corner_radius > 0) {
 		cmd->source_mask.corner_radius = layer->options.corner_radius;
 		cmd->source_mask.inverted = true;
-		cmd->source_mask.origin =
-		    ivec2_sub(layer->window.origin, layer->shadow.origin);
+		// The offset between shadow and window is `window.origin -
+		// shadow.origin`, in _screen_ coordinates. Since shadow will be scaled,
+		// we need to divide by the scale to get the offset in source image
+		// (i.e. shadow) coordinates.
+		cmd->source_mask.origin = vec2_scale(
+		    ivec2_as(ivec2_sub(layer->window.origin, layer->shadow.origin)),
+		    vec2_reciprocal(layer->shadow_scale));
 	}
 
 	scoped_region_t crop = region_from_box(layer->crop);
@@ -259,7 +269,7 @@ command_for_blur(struct layer *layer, struct backend_command *cmd,
 	cmd->op = BACKEND_COMMAND_BLUR;
 	cmd->origin = (ivec2){};
 	if (layer->options.corner_radius > 0) {
-		cmd->source_mask.origin = layer->window.origin;
+		cmd->source_mask.origin = ivec2_as(layer->window.origin);
 		cmd->source_mask.corner_radius = layer->options.corner_radius;
 		cmd->source_mask.inverted = false;
 	}
@@ -267,6 +277,7 @@ command_for_blur(struct layer *layer, struct backend_command *cmd,
 	    .opacity = layer->blur_opacity,
 	    .target_mask = &cmd->target_mask,
 	    .source_mask = layer->options.corner_radius > 0 ? &cmd->source_mask : NULL,
+	    .source_mask_scale = layer->scale,
 	};
 	return 1;
 }
@@ -434,6 +445,7 @@ void command_builder_free(struct command_builder *cb) {
 void command_builder_build(struct command_builder *cb, struct layout *layout,
                            bool force_blend, bool blur_frame, bool inactive_dim_fixed,
                            double max_brightness, const struct x_monitors *monitors,
+                           const struct shader_info *root_pixmap_shader,
                            const struct shader_info *shaders) {
 
 	unsigned ncmds = 1;
@@ -486,13 +498,36 @@ void command_builder_build(struct command_builder *cb, struct layout *layout,
 	}
 
 	// Command for the desktop background
-	cmd->op = BACKEND_COMMAND_COPY_AREA;
-	cmd->source = BACKEND_COMMAND_SOURCE_BACKGROUND;
-	cmd->origin = (ivec2){};
-	pixman_region32_reset(
-	    &cmd->target_mask,
-	    (rect_t[]){{.x1 = 0, .y1 = 0, .x2 = layout->size.width, .y2 = layout->size.height}});
-	cmd->copy_area.region = &cmd->target_mask;
+	if (root_pixmap_shader == NULL) {
+		// Just a simple copy_area
+		cmd->op = BACKEND_COMMAND_COPY_AREA;
+		cmd->source = BACKEND_COMMAND_SOURCE_BACKGROUND;
+		cmd->origin = (ivec2){};
+		pixman_region32_reset(
+		    &cmd->target_mask,
+		    (rect_t[]){
+		        {.x1 = 0, .y1 = 0, .x2 = layout->size.width, .y2 = layout->size.height}});
+		cmd->copy_area.region = &cmd->target_mask;
+	} else {
+		// Has shader for desktop background, use blit.
+		cmd->op = BACKEND_COMMAND_BLIT;
+		cmd->source = BACKEND_COMMAND_SOURCE_BACKGROUND;
+		cmd->origin = (ivec2){};
+		pixman_region32_reset(
+		    &cmd->target_mask,
+		    (rect_t[]){
+		        {.x1 = 0, .y1 = 0, .x2 = layout->size.width, .y2 = layout->size.height}});
+		pixman_region32_init(&cmd->opaque_region);
+		pixman_region32_copy(&cmd->opaque_region, &cmd->target_mask);
+		cmd->blit = (struct backend_blit_args){
+		    .tint = (struct color){1, 1, 1, 1},
+		    .max_brightness = 1,
+		    .scale = SCALE_IDENTITY,
+		    .effective_size = layout->size,
+		    .target_mask = &cmd->target_mask,
+		    .shader = root_pixmap_shader,
+		};
+	}
 	assert(cmd == list->commands);
 
 	layout->first_layer_start = 1;
