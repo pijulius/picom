@@ -154,7 +154,7 @@ static backend_t *egl_init(session_t *ps, xcb_window_t target) {
 	eglext_init(gd->display);
 	init_backend_base(&gd->gl.base, ps);
 	gd->gl.base.ops = egl_ops;
-	if (!eglext.has_EGL_KHR_image_pixmap) {
+	if (!eglext.has_KHR_image_pixmap) {
 		log_error("EGL_KHR_image_pixmap not available.");
 		goto end;
 	}
@@ -190,9 +190,14 @@ static backend_t *egl_init(session_t *ps, xcb_window_t target) {
 		goto end;
 	}
 
-	gd->ctx = eglCreateContext(gd->display, config, NULL, NULL);
+	gd->ctx = eglCreateContext(
+	    gd->display, config, NULL,
+	    (EGLint[]){EGL_CONTEXT_MAJOR_VERSION, 3, EGL_CONTEXT_MINOR_VERSION, 3,
+	               EGL_CONTEXT_OPENGL_PROFILE_MASK, EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT,
+	               EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY,
+	               EGL_LOSE_CONTEXT_ON_RESET, EGL_NONE});
 	if (gd->ctx == EGL_NO_CONTEXT) {
-		log_error("Failed to get EGL context.");
+		log_error("Failed to get EGL context: %#x", eglGetError());
 		goto end;
 	}
 
@@ -292,7 +297,7 @@ static bool egl_present(backend_t *base) {
 }
 
 static int egl_buffer_age(backend_t *base) {
-	if (!eglext.has_EGL_EXT_buffer_age) {
+	if (!eglext.has_EXT_buffer_age) {
 		return -1;
 	}
 
@@ -309,9 +314,11 @@ static void egl_diagnostics(backend_t *base) {
 	auto egl_vendor = eglQueryString(gd->display, EGL_VENDOR);
 	printf("* Driver vendors:\n");
 	printf(" * EGL: %s\n", egl_vendor);
-	if (eglext.has_EGL_MESA_query_driver) {
+#ifdef EGL_MESA_query_driver
+	if (eglext.has_MESA_query_driver) {
 		printf(" * EGL driver: %s\n", eglGetDisplayDriverName(gd->display));
 	}
+#endif
 	printf(" * GL: %s\n", glGetString(GL_VENDOR));
 
 	auto gl_renderer = (const char *)glGetString(GL_RENDERER);
@@ -334,7 +341,7 @@ static void egl_diagnostics(backend_t *base) {
 }
 
 static int egl_max_buffer_age(backend_t *base attr_unused) {
-	if (!eglext.has_EGL_EXT_buffer_age) {
+	if (!eglext.has_EXT_buffer_age) {
 		return 0;
 	}
 
@@ -390,17 +397,15 @@ void eglext_init(EGLDisplay dpy) {
 		return;
 	}
 	eglext.initialized = true;
-#define check_ext(name)                                                                  \
-	eglext.has_##name = epoxy_has_egl_extension(dpy, #name);                         \
-	log_info("Extension " #name " - %s", eglext.has_##name ? "present" : "absent")
+#define X(name)                                                                          \
+	eglext.has_##name = epoxy_has_egl_extension(dpy, "EGL_" #name);                  \
+	log_info("EGL extension " #name " - %s", eglext.has_##name ? "present" : "absent");
 
-	check_ext(EGL_EXT_buffer_age);
-	check_ext(EGL_EXT_create_context_robustness);
-	check_ext(EGL_KHR_image_pixmap);
+	EGL_EXTS;
 #ifdef EGL_MESA_query_driver
-	check_ext(EGL_MESA_query_driver);
+	X(MESA_query_driver);
 #endif
-#undef check_ext
+#undef X
 }
 
 BACKEND_ENTRYPOINT(egl_register) {
