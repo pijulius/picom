@@ -144,16 +144,15 @@ static bool store_string(const struct picom_option * /*opt*/, const struct picom
 static bool store_shader(const struct picom_option *opt, const struct picom_arg *arg,
                          const char *arg_str, void *output) {
 	scoped_charp cwd = getcwd(NULL, 0);
-	scoped_charp shader = locate_auxiliary_file("shaders", arg_str, cwd);
-	if (!shader) {
+	scoped_charp full_path = locate_auxiliary_file("shaders", arg_str, cwd);
+	if (!full_path) {
 		log_error("Couldn't find shader file \"%s\" for %s", arg_str, opt->long_name);
 		return false;
 	}
 
-	char **dst = (char **)(output + arg->offset);
+	auto dst = (struct shader_specification **)(output + arg->offset);
 	free(*dst);
-	*dst = shader;
-	shader = NULL;
+	*dst = shader_spec_from_path(full_path);
 	return true;
 }
 
@@ -960,8 +959,10 @@ void options_postprocess_c2_lists(struct c2_state *state, struct x_connection *c
 
 static void free_window_maybe_options(void *data) {
 	auto wopts = (struct window_maybe_options *)data;
-	free((void *)wopts->shader);
-	free(wopts);
+	if (wopts) {
+		free((void *)wopts->shader);
+		free(wopts);
+	}
 }
 
 void options_destroy(struct options *options) {
@@ -984,6 +985,8 @@ void options_destroy(struct options *options) {
 	free(options->config_file_path);
 	free(options->write_pid_path);
 	free(options->logpath);
+	free(options->window_shader_fg);
+	free(options->root_pixmap_shader);
 
 	for (int i = 0; i < options->blur_kernel_count; ++i) {
 		free(options->blur_kerns[i]);

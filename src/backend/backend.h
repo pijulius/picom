@@ -19,10 +19,11 @@ enum backend_command_op {
 /// Symbolic references used as render command source images. The actual `image_handle`
 /// will later be filled in by the renderer using this symbolic reference.
 enum backend_command_source {
+	BACKEND_COMMAND_SOURCE_IMAGE,
 	BACKEND_COMMAND_SOURCE_WINDOW,
 	BACKEND_COMMAND_SOURCE_WINDOW_SAVED,
 	BACKEND_COMMAND_SOURCE_SHADOW,
-	BACKEND_COMMAND_SOURCE_BACKGROUND,
+	BACKEND_COMMAND_SOURCE_CLEAR,
 };
 
 // TODO(yshui) might need better names
@@ -51,6 +52,8 @@ struct backend_command {
 	struct backend_mask_image source_mask;
 	/// Target mask for the operation.
 	region_t target_mask;
+	/// Extra information attached to the shader used in this command.
+	const struct shader_info *shader_info;
 };
 
 bool backend_execute(struct backend_base *backend, image_handle target, unsigned ncmds,

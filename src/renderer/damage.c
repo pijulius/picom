@@ -82,8 +82,8 @@ command_blit_damage(region_t *damage, region_t *scratch_region, struct backend_c
 	    // (we already checked cmd1 and cmd2 have the same shader)
 	    // If the custom shader is animated, we consider the whole window
 	    // damaged.
-	    (cmd1->blit.shader != NULL &&
-	     cmd1->blit.shader->attributes & SHADER_ATTRIBUTE_ANIMATED) ||
+	    (cmd1->shader_info != NULL &&
+	     cmd1->shader_info->attributes & SHADER_ATTRIBUTE_ANIMATED) ||
 
 	    // Second part, if round corner is enabled, then border width and effective size
 	    // affect the whole image too.
@@ -164,16 +164,30 @@ void layout_manager_damage(struct layout_manager *lm, unsigned buffer_age,
 		                           (unsigned)curr_layout->size.height);
 		return;
 	}
-	if (curr_layout->number_of_commands > 0) {
-		auto background = &curr_layout->commands[0];
-		assert(background->source == BACKEND_COMMAND_SOURCE_BACKGROUND);
-		if (background->op == BACKEND_COMMAND_BLIT && background->blit.shader != NULL &&
-		    (background->blit.shader->attributes & SHADER_ATTRIBUTE_ANIMATED) != 0) {
-			pixman_region32_union_rect(damage, damage, 0, 0,
-			                           (unsigned)curr_layout->size.width,
-			                           (unsigned)curr_layout->size.height);
-			return;
-		}
+
+	// First, if the existence of background image changed between curr_layout and
+	// past_layout, mark it as damaged.
+	auto is_background_changed =
+	    curr_layout->first_layer_start != past_layout->first_layer_start;
+	if (!is_background_changed && curr_layout->first_layer_start > 1) {
+		auto background = &curr_layout->commands[1];
+		assert(curr_layout->first_layer_start == 2);
+
+		// Otherwise, consider background changed if it has a shader that might be
+		// animated.
+		is_background_changed =
+		    background->op == BACKEND_COMMAND_BLIT &&
+		    background->shader_info != NULL &&
+		    (background->shader_info->attributes & SHADER_ATTRIBUTE_ANIMATED) != 0;
+	}
+	if (is_background_changed) {
+		// TODO(yshui) this is crude, even though the background has changed, that
+		// change might be obscured by other windows on top, and not actually be
+		// visible.
+		pixman_region32_union_rect(damage, damage, 0, 0,
+		                           (unsigned)curr_layout->size.width,
+		                           (unsigned)curr_layout->size.height);
+		return;
 	}
 	if (log_get_level_tls() <= LOG_LEVEL_TRACE) {
 		log_trace("Comparing across %d layouts:", buffer_age);

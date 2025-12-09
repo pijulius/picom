@@ -350,11 +350,11 @@ static bool parse_animation_one(struct win_script *animations,
 			auto trigger_i = trigger_i_str == NULL
 			                     ? ANIMATION_TRIGGER_INVALID
 			                     : parse_animation_trigger(trigger_i_str);
-			if (trigger_types & (1 << trigger_i)) {
+			if (trigger_types & (1U << trigger_i)) {
 				log_warn("Duplicate trigger \"%s\" set at line %d",
 				         trigger_i_str, config_setting_source_line(triggers));
 			}
-			trigger_types |= 1 << trigger_i;
+			trigger_types |= 1U << trigger_i;
 		}
 	} else {
 		trigger_types = 1 << parse_animation_trigger(trigger0);
@@ -459,7 +459,7 @@ static void parse_animations(struct win_script *animations, config_setting_t *se
                              struct script ***out_scripts) {
 	auto number_of_animations = (unsigned)config_setting_length(setting);
 	for (unsigned i = 0; i < number_of_animations; i++) {
-		auto sub = config_setting_get_elem(setting, (unsigned)i);
+		auto sub = config_setting_get_elem(setting, i);
 		parse_animation_one(animations, out_scripts, sub);
 	}
 }
@@ -474,7 +474,7 @@ static void parse_animations(struct win_script *animations, config_setting_t *se
 #define FADING_TEMPLATE_2                                                                \
 	"blur-opacity = { "                                                              \
 	"  duration = %s; "                                                              \
-	"  start = %d; end = %d; "                                                       \
+	"  start = %s; end = %s; "                                                       \
 	"};"
 
 static bool compile_win_script_from_string(struct win_script *result, const char *input) {
@@ -511,9 +511,11 @@ void generate_fading_config(struct options *opt) {
 		// Fading in from nothing, i.e. `open` and `show`. These will fade blur
 		// opacity with the window opacity. Unless `blur-background-fixed` is
 		// used, in which case blur-opacity stays at 1.
-		int start = opt->blur_background_fixed ? 1 : 0;
+		auto start = opt->blur_background_fixed
+		                 ? "\"window-blur-opacity\""
+		                 : "\"window-blur-opacity-before\"";
 		asnprintf(&str, &len, FADING_TEMPLATE_1 FADING_TEMPLATE_2, duration_str,
-		          duration_str, start, 1);
+		          duration_str, start, "\"window-blur-opacity\"");
 
 		struct win_script fade_in1 = {.is_generated = true};
 		BUG_ON(!compile_win_script_from_string(&fade_in1, str));
@@ -530,8 +532,10 @@ void generate_fading_config(struct options *opt) {
 			script_free(fade_in1.script);
 		}
 
-		// Fading for opacity change, for these, the blur opacity doesn't change.
-		asnprintf(&str, &len, FADING_TEMPLATE_1, duration_str);
+		// Fading for opacity change.
+		asnprintf(&str, &len, FADING_TEMPLATE_1 FADING_TEMPLATE_2, duration_str,
+		          duration_str, "\"window-blur-opacity-before\"",
+		          "\"window-blur-opacity\"");
 		struct win_script fade_in2 = {.is_generated = true};
 		BUG_ON(!compile_win_script_from_string(&fade_in2, str));
 		triggers = 0;
@@ -555,9 +559,10 @@ void generate_fading_config(struct options *opt) {
 		dtostr(duration, &duration_str);
 
 		// Fading out to nothing, i.e. `hide` and `close`. Same as above.
-		int end = opt->blur_background_fixed ? 1 : 0;
+		auto end = opt->blur_background_fixed ? "\"window-blur-opacity-before\""
+		                                      : "\"window-blur-opacity\"";
 		asnprintf(&str, &len, FADING_TEMPLATE_1 FADING_TEMPLATE_2, duration_str,
-		          duration_str, 1, end);
+		          duration_str, "\"window-blur-opacity-before\"", end);
 		struct win_script fade_out1 = {.is_generated = true};
 		BUG_ON(!compile_win_script_from_string(&fade_out1, str));
 		if (opt->animations[ANIMATION_TRIGGER_CLOSE].script == NULL &&
@@ -574,7 +579,9 @@ void generate_fading_config(struct options *opt) {
 		}
 
 		// Fading for opacity change
-		asnprintf(&str, &len, FADING_TEMPLATE_1, duration_str);
+		asnprintf(&str, &len, FADING_TEMPLATE_1 FADING_TEMPLATE_2, duration_str,
+		          duration_str, "\"window-blur-opacity-before\"",
+		          "\"window-blur-opacity\"");
 		struct win_script fade_out2 = {.is_generated = true};
 		BUG_ON(!compile_win_script_from_string(&fade_out2, str));
 		triggers = 0;
@@ -645,12 +652,76 @@ static const struct {
     {"transparent-clipping", offsetof(struct window_maybe_options, transparent_clipping)},
 };
 
-static c2_condition *parse_rule(struct list_node *rules, config_setting_t *setting,
-                                struct script ***out_scripts, bool *deprecated) {
+static struct shader_specification *
+parse_shader_specification(config_setting_t *setting, const char *include_dir) {
+	const char *path = config_setting_get_string(setting);
+	config_setting_t *defines = NULL;
+	unsigned n = 0;
+	if (!path) {
+		if (!config_setting_is_group(setting)) {
+			log_error("shader specification at line %d is neither a string "
+			          "nor a group.",
+			          config_setting_source_line(setting));
+			return NULL;
+		}
+
+		if (!config_setting_lookup_string(setting, "path", &path)) {
+			log_error("shader specification at line %d does not have a path.",
+			          config_setting_source_line(setting));
+			return NULL;
+		}
+
+		defines = config_setting_lookup(setting, "defines");
+		n = defines ? (unsigned)config_setting_length(defines) : 0;
+	}
+
+	char *full_path = locate_auxiliary_file("shader", path, include_dir);
+	if (!full_path) {
+		log_error("Couldn't find custom shader file with name \"%s\"", path);
+		return NULL;
+	}
+
+	auto len = strlen(full_path) + 1;
+	for (unsigned i = 0; i < n; i++) {
+		auto elem = config_setting_get_elem(defines, i);
+		auto value = config_setting_get_string(elem);
+		if (value == NULL) {
+			log_error("shader define at line %d is not a string.",
+			          config_setting_source_line(elem));
+			return NULL;
+		}
+		len += strlen(config_setting_name(elem)) + 1;
+		len += strlen(value) + 1;
+	}
+
+	struct shader_specification *ret =
+	    calloc(1, offsetof(struct shader_specification, data[len]));
+	BUG_ON(ret == NULL);
+	ret->size = len;
+	strcpy(ret->data, full_path);
+
+	auto pos = strlen(full_path) + 1;
+	free(full_path);
+	for (unsigned i = 0; i < n; i++) {
+		auto elem = config_setting_get_elem(defines, i);
+		auto value = config_setting_get_string(elem);
+
+		strcpy(ret->data + pos, config_setting_name(elem));
+		pos += strlen(ret->data + pos) + 1;
+		strcpy(ret->data + pos, value);
+		pos += strlen(ret->data + pos) + 1;
+	}
+
+	return ret;
+}
+
+static bool
+parse_rule(struct list_node *rules, config_setting_t *setting, const char *include_dir,
+           struct script ***out_scripts, bool *deprecated) {
 	if (!config_setting_is_group(setting)) {
 		log_error("Invalid rule at line %d. It must be a group.",
 		          config_setting_source_line(setting));
-		return NULL;
+		return false;
 	}
 	int ival;
 	double fval;
@@ -661,7 +732,7 @@ static c2_condition *parse_rule(struct list_node *rules, config_setting_t *setti
 		if (!rule) {
 			log_error("Failed to parse rule at line %d.",
 			          config_setting_source_line(setting));
-			return NULL;
+			return false;
 		}
 	} else {
 		// If no match condition is specified, it matches all windows
@@ -680,6 +751,9 @@ static c2_condition *parse_rule(struct list_node *rules, config_setting_t *setti
 	}
 	if (config_setting_lookup_float(setting, "opacity", &fval)) {
 		wopts->opacity = normalize_d(fval);
+	}
+	if (config_setting_lookup_float(setting, "blur-opacity", &fval)) {
+		wopts->blur_opacity = normalize_d(fval);
 	}
 	if (config_setting_lookup_float(setting, "dim", &fval)) {
 		wopts->dim = normalize_d(fval);
@@ -703,22 +777,34 @@ static c2_condition *parse_rule(struct list_node *rules, config_setting_t *setti
 		parse_animations(wopts->animations, animations, out_scripts);
 	}
 
-	config_setting_lookup_string(setting, "shader", &wopts->shader);
-	return rule;
+	auto shader_setting = config_setting_lookup(setting, "shader");
+	if (shader_setting) {
+		wopts->shader = parse_shader_specification(shader_setting, include_dir);
+		if (!wopts->shader) {
+			c2_condition_set_data(rule, NULL);
+			free(wopts);
+			return false;
+		}
+	}
+	return true;
 }
 
-static void parse_rules(struct list_node *rules, config_setting_t *setting,
-                        struct script ***out_scripts, bool *deprecated) {
+static bool
+parse_rules(struct list_node *rules, config_setting_t *setting, const char *include_dir,
+            struct script ***out_scripts, bool *deprecated) {
 	if (!config_setting_is_list(setting)) {
 		log_error("Invalid value for \"rules\" at line %d. It must be a list.",
 		          config_setting_source_line(setting));
-		return;
+		return false;
 	}
 	const auto length = (unsigned int)config_setting_length(setting);
 	for (unsigned int i = 0; i < length; i++) {
 		auto sub = config_setting_get_elem(setting, i);
-		parse_rule(rules, sub, out_scripts, deprecated);
+		if (!parse_rule(rules, sub, include_dir, out_scripts, deprecated)) {
+			return false;
+		}
 	}
+	return true;
 }
 
 static const char **
@@ -751,6 +837,7 @@ bool parse_config_libconfig(options_t *opt, const char *config_file) { /*NOLINT(
 	// libconfig manages string memory itself, so no need to manually free
 	// anything
 	const char *sval = NULL;
+	config_setting_t *subcfg;
 	bool succeeded = false;
 
 	f = open_config_file(config_file, &path);
@@ -770,7 +857,7 @@ bool parse_config_libconfig(options_t *opt, const char *config_file) { /*NOLINT(
 #endif
 	{
 		char *abspath = realpath(path, NULL);
-		char *parent = dirname(abspath);        // path2 may be modified
+		char *parent = dirname(abspath);
 
 		if (parent) {
 			config_set_include_dir(&cfg, parent);
@@ -842,17 +929,14 @@ bool parse_config_libconfig(options_t *opt, const char *config_file) { /*NOLINT(
 	config_setting_t *rules = config_lookup(&cfg, "rules");
 	if (rules) {
 		bool deprecated = false;
-		parse_rules(&opt->rules, rules, &opt->all_scripts, &deprecated);
+		if (!parse_rules(&opt->rules, rules, config_get_include_dir(&cfg),
+		                 &opt->all_scripts, &deprecated)) {
+			log_fatal("Couldn't parse window rules at line %d.",
+			          config_setting_source_line(rules));
+			goto out;
+		}
 		if (deprecated) {
 			report_deprecated_option(opt, "rules", false);
-		}
-		c2_condition_list_foreach(&opt->rules, i) {
-			auto data = (struct window_maybe_options *)c2_condition_get_data(i);
-			if (data->shader == NULL) {
-				continue;
-			}
-			data->shader = locate_auxiliary_file(
-			    "shaders", data->shader, config_get_include_dir(&cfg));
 		}
 	}
 
@@ -1153,14 +1237,22 @@ bool parse_config_libconfig(options_t *opt, const char *config_file) { /*NOLINT(
 	}
 
 	// --window-shader-fg
-	if (config_lookup_string(&cfg, "window-shader-fg", &sval)) {
+	subcfg = config_lookup(&cfg, "window-shader-fg");
+	if (subcfg) {
 		opt->window_shader_fg =
-		    locate_auxiliary_file("shaders", sval, config_get_include_dir(&cfg));
+		    parse_shader_specification(subcfg, config_get_include_dir(&cfg));
+		if (!opt->window_shader_fg) {
+			goto out;
+		}
 	}
 
-	if (config_lookup_string(&cfg, "root-pixmap-shader", &sval)) {
+	subcfg = config_lookup(&cfg, "root-pixmap-shader");
+	if (subcfg) {
 		opt->root_pixmap_shader =
-		    locate_auxiliary_file("shaders", sval, config_get_include_dir(&cfg));
+		    parse_shader_specification(subcfg, config_get_include_dir(&cfg));
+		if (!opt->root_pixmap_shader) {
+			goto out;
+		}
 	}
 
 	// --xrender-sync-fence

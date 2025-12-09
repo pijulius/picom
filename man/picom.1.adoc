@@ -316,6 +316,9 @@ Within each sub-item, these keys are available: ::
   opacity:::
 	Opacity of the matching window. (0.0 - 1.0). If not explicitly set by a rule, the opacity value from the window properties (e.g. pass:[_]NET_WM_WINDOW_OPACITY) will be used.
 
+  blur-opacity:::
+	Opacity of the background blur. (0.0 - 1.0). If not explicitly set by a rule, this will be 1.0. Ignored by `blur-background` is not enabled.
+
   dim:::
 	Dim level of the matching window. Larger value means more dimming. (0.0 - 1.0)
 
@@ -338,7 +341,18 @@ Within each sub-item, these keys are available: ::
 	Whether to make the matching window clip other windows like opaque windows do, instead of blending on top of them. When applied to transparent windows, this means nothing will be painted under the transparent parts of the window, essentially cuts a hole in the screen.
 
   shader:::
-	GLSL fragment shader path for rendering window contents. See section xref:_shader_interface[*SHADER INTERFACE*] below for more details on the interface.
+	GLSL fragment shader specification for rendering window contents. See section xref:_shader_interface[*SHADER INTERFACE*] below for more details on the interface. This option can be a simple path to the shader file, but it's also possible to specify extra options to the shader. Currently, the only extra options supported are macro defines. Syntax:
++
+----
+shader = {
+	path = "path/to/shader.glsl";
+	defines = {
+		COLOR = "vec4(1.0, 0.0, 0.0, 1.0)";
+	};
+};
+----
++
+This will prepend `#define COLOR vec4(1.0, 0.0, 0.0, 1.0)` to your shader (note the lack of double quotes). The value of a define MUST be a string, any string will be accepted and no sanitization is performed.
 
   [[window-rules-animations]]animations:::
 	Define window-specific animation scripts. The format of this option is the same as the top-level _animations_ option. You can find more information in the xref:_animations[*ANIMATIONS*] section. If animation scripts are defined in multiple matching rules, they will be merged together. If multiple matching rules contain animation scripts for the same trigger, the last one will take effect, the same as other options.
@@ -514,9 +528,9 @@ animations = ({
 
 	  _hide_:: When a window is minimized or iconified.
 
-	  _increase-opacity_:: When the opacity of a window is increased.
+	  _increase-opacity_:: When the opacity or the blur opacity of a window is increased. If the opacity and the blur opacity changed in different directions, the opacity change takes precedence.
 
-	  _decrease-opacity_:: When the opacity of a window is decreased.
+	  _decrease-opacity_:: When the opacity or the blur opacity of a window is decreased. If the opacity and the blur opacity changed in different directions, the opacity change takes precedence.
 
 	  _size_, _position_:: When the size or position of a window is changed. If both changed, the position trigger has priority. (EXPERIMENTAL)
 
@@ -753,6 +767,8 @@ Currently, these context variables are defined: :::
   _window-monitor-x_, _window-monitor-y_, _window-monitor-width_, _window-monitor-height_:: Defines the rectangle which reflects the monitor the window is on. If the window is not fully contained in any monitor, the rectangle will reflect the entire virtual screen.
 
   _window-raw-opacity-before_, _window-raw-opacity_:: Animation triggers are usually accompanied by a change in the window's opacity. For example, when a window is opened, its opacity changes from 0 to 1. These two variables reflect the opacity of the window for the previous and current frame. They are useful if you want to smoothly transition the window's opacity.
+
+  _window-blur-opacity-before_, _window-blur-opacity_:: The blur opacity of the window for the previous and current frame.
 
   _window-shadow-red_, _window-shadow-green_, _window-shadow-blue_, _window-shadow-red-before_, _window-shadow-green-before_, _window-shadow-blue-before_:: Color of the shadow before and after the shadow color change. (See notes below about _window-*-before_ variables.
 
